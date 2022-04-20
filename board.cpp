@@ -4,12 +4,19 @@
 #	define ffs(x) __builtin_ffs(x)
 #endif
 
-bool Board::inbound(int_fast8_t pos)
+
+LookupTables Board::lookup;
+
+/*** LookupTables Implementations ***/
+
+LookupTables::LookupTables()
 {
-	return 0 <= pos && pos < BOARD_SIZE;
+	compute_neighbours();
+	compute_archer_attacks();
+	compute_n_k_subsets();
 }
 
-void Board::compute_neighbours()
+void LookupTables::compute_neighbours()
 {
 	const int_fast8_t dx[] = {-1, 0, 1, 0};
 	const int_fast8_t dy[] = {0, 1, 0, -1};
@@ -31,18 +38,7 @@ void Board::compute_neighbours()
 	}
 }
 
-void Board::compute_team_bitmaps()
-{
-	for (int j = 0; j < NUM_TEAMS; ++j) {
-		this->team_bitmaps[j] = 0;
-		for (int i = 0; i < NUM_PIECES; ++i) {
-			this->team_bitmaps[j] |= this->pieces[j][i];
-		}
-	}
-
-}
-
-void Board::compute_archer_attacks()
+void LookupTables::compute_archer_attacks()
 {
 	int_fast16_t bb;
 
@@ -77,7 +73,7 @@ void Board::compute_archer_attacks()
 	}
 }
 
-void comb(std::vector<std::vector<int_fast8_t>> &res, std::vector<int_fast8_t> data, int n, int k, int index, int i)
+static void comb(std::vector<std::vector<int_fast8_t>> &res, std::vector<int_fast8_t> data, int n, int k, int index, int i)
 {
 	if (index == k) {
 		res.push_back(data);
@@ -93,7 +89,7 @@ void comb(std::vector<std::vector<int_fast8_t>> &res, std::vector<int_fast8_t> d
 	comb(res, data, n, k, index, i + 1);
 }
 
-void Board::compute_n_k_subsets()
+void LookupTables::compute_n_k_subsets()
 {
 	std::vector<int_fast8_t> data;
 
@@ -103,6 +99,24 @@ void Board::compute_n_k_subsets()
 			comb(this->n_k_subset[n - 1][ k - 1], data, n, k, 0, 0);
 		}
 	}
+}
+
+/*** Board Implementations ***/
+
+bool Board::inbound(int_fast8_t pos)
+{
+	return 0 <= pos && pos < BOARD_SIZE;
+}
+
+void Board::compute_team_bitmaps()
+{
+	for (int j = 0; j < NUM_TEAMS; ++j) {
+		this->team_bitmaps[j] = 0;
+		for (int i = 0; i < NUM_PIECES; ++i) {
+			this->team_bitmaps[j] |= this->pieces[j][i];
+		}
+	}
+
 }
 
 void Board::update_activity(int_fast8_t pos)
@@ -115,7 +129,7 @@ void Board::update_activity(int_fast8_t pos)
 
 	const Team t = this->info[pos].team;
 	// will be 1 if active and 0 otherwise
-	const int_fast16_t a = (this->team_bitmaps[t] & this->neighbours[pos]) != 0;
+	const int_fast16_t a = (this->team_bitmaps[t] & this->lookup.neighbours[pos]) != 0;
 	// unset pos bit and set pos bit to be a
 	this->active[t] &= ~(1 << pos);
 	this->active[t] |= a << pos;
@@ -146,10 +160,6 @@ Board::Board()
 	this->state = SWAP;
 	this->turn_count = 0;
 	this->damaged = 0;
-
-	compute_neighbours();
-	compute_archer_attacks();
-	compute_n_k_subsets();
 }
 
 void Board::place_piece(Piece type, Team colour, int_fast8_t hp, int_fast8_t max_hp, int_fast8_t pos)
@@ -196,7 +206,7 @@ void Board::swap(int_fast8_t pos1, int_fast8_t pos2)
 	compute_team_bitmaps();
 
 	// update active bitmap
-	int_fast16_t loc2update = this->neighbours[pos1] | this->neighbours[pos2] | bitmap_pos1 | bitmap_pos2;
+	int_fast16_t loc2update = this->lookup.neighbours[pos1] | this->lookup.neighbours[pos2] | bitmap_pos1 | bitmap_pos2;
 
 	while (loc2update) {
 		//std::cout << (int)loc2update << std::endl;
@@ -247,7 +257,7 @@ void Board::apply_action(action &a)
 					this->pieces[stats->team][stats->type] &= ~(1 << a.trgts[i]);
 					this->team_bitmaps[other_team] &= ~(1 << a.trgts[i]);
 					this->active[other_team] &= ~(1 << a.trgts[i]);
-					update |= this->neighbours[a.trgts[i]] & this->team_bitmaps[other_team];
+					update |= this->lookup.neighbours[a.trgts[i]] & this->team_bitmaps[other_team];
 				}
 			}
 			// update activity
@@ -289,7 +299,7 @@ void Board::generate_swaps_at(
 	Team other_team = static_cast<Team>(1 - this->info[pos].team);
 	const int_fast16_t all_pieces = this->team_bitmaps[WHITE] | this->team_bitmaps[BLACK];
 
-	int_fast16_t swapable = this->neighbours[pos] & (all_pieces ^ this->pieces[other_team][SHIELD]);
+	int_fast16_t swapable = this->lookup.neighbours[pos] & (all_pieces ^ this->pieces[other_team][SHIELD]);
 	std::pair<int_fast8_t, int_fast8_t> edge;
 
 	while (swapable) {
@@ -344,11 +354,11 @@ void Board::generate_actions_at(int_fast8_t pos, std::vector<action> &actions)
 
 	switch (p) {
 		case KING:
-			trgts = this->neighbours[pos] & this->team_bitmaps[other_team];
+			trgts = this->lookup.neighbours[pos] & this->team_bitmaps[other_team];
 			k = 1;
 			break;
 		case MEDIC:
-			trgts = this->neighbours[pos] & this->team_bitmaps[t] & this->damaged;
+			trgts = this->lookup.neighbours[pos] & this->team_bitmaps[t] & this->damaged;
 			k = 4;
 			break;
 		case WIZARD:
@@ -358,11 +368,11 @@ void Board::generate_actions_at(int_fast8_t pos, std::vector<action> &actions)
 		case ARCHER:
 			opp_shield = ffs(this->pieces[other_team][SHIELD]) - 1;
 			opp_shield = opp_shield >= 0 ? opp_shield : BOARD_SIZE;
-			trgts = this->archer_attacks[pos][opp_shield] & this->team_bitmaps[other_team];
+			trgts = this->lookup.archer_attacks[pos][opp_shield] & this->team_bitmaps[other_team];
 			k = 1;
 			break;
 		case KNIGHT:
-			trgts = this->neighbours[pos] & this->team_bitmaps[other_team];
+			trgts = this->lookup.neighbours[pos] & this->team_bitmaps[other_team];
 			k = 2;
 			break;
 		case SHIELD:
@@ -393,7 +403,7 @@ void Board::generate_actions_at(int_fast8_t pos, std::vector<action> &actions)
 			if (trgt_pos.size() < i)
 				break;
 			act.num_trgts = i;
-			for (auto &subset: this->n_k_subset[trgt_pos.size()-1][i-1]) {
+			for (auto &subset: this->lookup.n_k_subset[trgt_pos.size()-1][i-1]) {
 				for (int j = 0; j < i; ++j) {
 					act.trgts[j] = trgt_pos[subset[j]];
 				}

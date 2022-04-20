@@ -4,9 +4,15 @@
 #include "board.h"
 
 
+const std::string index2rank_file[] = {
+	"A1", "B1", "C1", "D1",
+	"A2", "B2", "C2", "D2",
+	"A3", "B3", "C3", "D3",
+	"A4", "B4", "C4", "D4"
+};
+
 void setup_board(Board &b)
 {
-
 	// black pieces
 	b.place_piece(ARCHER, BLACK, 3, 3, 0);
 	b.place_piece(KING, BLACK, 4, 4, 1);
@@ -43,10 +49,11 @@ std::vector<int_fast8_t> get_input()
 	std::stringstream ss(pos);
 
 	while (ss >> pos) {
-		if (pos.length() != 2 || !('a' <= pos[0] && pos[0] <= 'd') || !('1' <= pos[1] && pos[1] <= '4')) {
+		if (pos.length() != 2 || !('a' <= pos[0] && pos[0] <= 'd' || 'A' <= pos[0] && pos[0] <= 'D')
+				|| !('1' <= pos[1] && pos[1] <= '4')) {
 			throw std::invalid_argument("Input formated incorrectly");
 		}
-		loc = BOARD_WIDTH * (pos[1] - '1') + (pos[0] - 'a');
+		loc = BOARD_WIDTH * (pos[1] - '1') + (tolower(pos[0]) - 'a');
 		out.push_back(loc);
 	}
 
@@ -77,15 +84,18 @@ void display_moves(Board &b)
 		auto swaps = b.generate_swaps();
 		std::cout << "Swaps:";
 		for (auto &swap : swaps) {
-			std::cout << " (" << (int)swap.first << ", " << (int)swap.second << ")";
+			//std::cout << " (" << (int)swap.first << ", " << (int)swap.second << ")";
+			std::cout << " (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
 		}
 	} else {
 		auto actions = b.generate_actions();
 		std::cout << "Actions:";
 		for (auto &action : actions) {
-			std::cout <<" (" << (int)action.pos << ", [";
+			//std::cout <<" (" << (int)action.pos << ", [";
+			std::cout <<" (" << index2rank_file[action.pos] << ", [";
 			for (int i = 0; i < action.num_trgts; ++i) {
-				std::cout << (int)action.trgts[i];
+				//std::cout << (int)action.trgts[i];
+				std::cout << index2rank_file[action.trgts[i]];
 				if (i != action.num_trgts - 1) {
 					std::cout << ", ";
 				}

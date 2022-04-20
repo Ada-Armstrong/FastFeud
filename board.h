@@ -43,6 +43,30 @@ struct action {
 	int_fast8_t trgts[4];
 };
 
+class LookupTables {
+	public:
+	// bitmap for each position representing neighbours of that tile
+	int_fast16_t neighbours[BOARD_SIZE];
+	// archer attack lookup table, first index archer pos 0-15, second
+	// index the pos of enemy shield 0-15, 16 if no shield
+	int_fast16_t archer_attacks[BOARD_SIZE][BOARD_SIZE+1];
+	// stores index of k element subsets of an array of length n,
+	// first index for array len, second for k element subset
+	std::vector<std::vector<int_fast8_t>> n_k_subset[4][4];
+
+	private:
+
+	void compute_neighbours();
+
+	void compute_archer_attacks();
+
+	void compute_n_k_subsets();
+
+	public:
+
+	LookupTables();
+};
+
 /*  |  A |  B |  C |  D |
  * -|----|----|----|----|
  * 1|  0 |  1 |  2 |  3 |
@@ -65,6 +89,8 @@ class Board {
 
 	private:
 
+	static LookupTables lookup;
+
 	int_fast16_t pieces[NUM_TEAMS][NUM_PIECES];
 
 	piece_stats info[BOARD_SIZE];
@@ -72,28 +98,14 @@ class Board {
 	int_fast16_t active[NUM_TEAMS];
 	int_fast8_t passes[NUM_TEAMS];
 
-	// bitmap for each position representing neighbours of that tile
-	int_fast16_t neighbours[BOARD_SIZE];
 	// stores a bitmap for each team representing where the pieces are
 	int_fast16_t team_bitmaps[NUM_TEAMS];
 	// tracks pieces that don't have full hp and that are alive
 	int_fast16_t damaged;
-	// archer attack lookup table, first index archer pos 0-15, second
-	// index the pos of enemy shield 0-15, 16 if no shield
-	int_fast16_t archer_attacks[BOARD_SIZE][BOARD_SIZE+1];
-	// stores index of k element subsets of an array of length n,
-	// first index for array len, second for k element subset
-	std::vector<std::vector<int_fast8_t>> n_k_subset[4][4];
 
 	bool inbound(int_fast8_t pos);
 
-	void compute_neighbours();
-
 	void compute_team_bitmaps();
-
-	void compute_archer_attacks();
-
-	void compute_n_k_subsets();
 
 	void generate_swaps_at(
 			int_fast8_t pos,
