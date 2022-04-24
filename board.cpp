@@ -451,6 +451,14 @@ bool Board::surrendered(Team t)
 	return this->passes[t] > 2;
 }
 
+bool Board::gameover()
+{
+	const Team opponent = static_cast<Team>(1 - this->to_play);
+	return isolated(this->to_play) || isolated(opponent)
+		|| king_dead(this->to_play) || king_dead(opponent)
+		|| surrendered(this->to_play) || surrendered(opponent);
+}
+
 std::ostream &operator<<(std::ostream &os, const Board &b)
 {
 	for (int i = 0; i < BOARD_SIZE; ++i) {

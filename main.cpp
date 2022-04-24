@@ -110,6 +110,7 @@ int main(void)
 {
 	Board b;
 	setup_board(b);
+	
 	bool finished = false;
 	
 	while (!finished) {

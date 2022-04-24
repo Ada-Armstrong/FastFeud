@@ -140,6 +140,8 @@ class Board {
 
 	bool surrendered(Team t);
 
+	bool gameover();
+
 	friend std::ostream &operator<<(std::ostream &os, const Board &b);
 };
 
