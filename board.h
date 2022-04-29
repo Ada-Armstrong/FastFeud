@@ -12,7 +12,8 @@
 enum Team {
 	BLACK = 0,
 	WHITE = 1,
-	NUM_TEAMS
+	NUM_TEAMS,
+	NONE
 };
 
 enum Piece {
@@ -141,6 +142,8 @@ class Board {
 	bool surrendered(Team t);
 
 	bool gameover();
+
+	Team winner();
 
 	friend std::ostream &operator<<(std::ostream &os, const Board &b);
 };

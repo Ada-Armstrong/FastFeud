@@ -459,6 +459,30 @@ bool Board::gameover()
 		|| surrendered(this->to_play) || surrendered(opponent);
 }
 
+Team Board::winner()
+{
+	if (!this->gameover()) {
+		return NONE;
+	}
+
+	const bool bi = this->isolated(BLACK);
+	const bool wi = this->isolated(WHITE);
+
+	if (bi && wi) {
+		return NONE;
+	} else if (bi) {
+		return WHITE;
+	} else if (wi) {
+		return BLACK;
+	} else if (this->surrendered(BLACK) || this->king_dead(BLACK)) {
+		return WHITE;
+	} else if (this->surrendered(WHITE) || this->king_dead(WHITE)) {
+		return BLACK;
+	}
+
+	return NONE;
+}
+
 std::ostream &operator<<(std::ostream &os, const Board &b)
 {
 	for (int i = 0; i < BOARD_SIZE; ++i) {
