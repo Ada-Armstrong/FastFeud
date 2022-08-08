@@ -3,10 +3,14 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
+#include <fstream>
 #include "board.h"
+#include "alphabeta.h"
 
 #define FF_ERROR_STRING(msg) "\033[31;1m" << msg << "\033[0m"
 #define FF_SUCCESS_STRING(msg) "\033[32;1m" << msg << "\033[0m"
+#define FF_ACTIVE_STRING(msg) "\033[33m" << msg << "\033[0m"
+#define FF_INACTIVE_STRING(msg) "\033[34m" << msg << "\033[0m"
 
 
 const std::string index2rank_file[] = {
@@ -65,6 +69,29 @@ std::vector<int_fast8_t> get_input()
 	return out;
 }
 
+void pretty_print_board(Board &b)
+{
+	auto tiles = b.tile_info();
+	int i = 0;
+
+	for (auto &stats : tiles) {
+		if (stats.hp > 0) {
+			if (stats.active) {
+				std::cout << "| " << FF_ACTIVE_STRING(stats.team << " " << stats.type << " " << (int)stats.hp << " " << (int)stats.max_hp);
+			} else {
+				std::cout << "| " << FF_INACTIVE_STRING(stats.team << " " << stats.type << " " << (int)stats.hp << " " << (int)stats.max_hp);
+			}
+		} else {
+			std::cout << "|" << FF_INACTIVE_STRING(" ..... . . .");
+		}
+		if (i++ % BOARD_WIDTH == BOARD_WIDTH - 1) {
+			std::cout << "|\n";
+		}
+	}
+
+
+}
+
 void display_moves(Board &b)
 {
 	if (b.state == SWAP) {
@@ -88,6 +115,11 @@ void display_moves(Board &b)
 		}
 	}
 	std::cout << std::endl;
+}
+
+void computer_move_suggestion(Board &b)
+{
+	std::cout << "Suggested Move Index: " << suggest_move(b, 8) << std::endl;
 }
 
 bool is_swap_valid(std::vector<int_fast8_t> swap, std::vector<std::pair<int_fast8_t, int_fast8_t>> valid_swaps)
@@ -124,19 +156,26 @@ bool is_action_valid(action a, std::vector<action> valid_actions) {
 	return false;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	Board b;
-	setup_board(b);
+	std::string filename("../positions/default1.txt");
+	if (argc == 2) {
+		filename = argv[1];
+	}
+	b.load_file(filename);
+	//setup_board(b);
 	
 	std::pair<Team, Win_Condition> winner_info{NONE, NO_WINNER};
 	
 	while (1) {
 		Team turn = b.to_play;
 		std::cout << "Turn: " << turn << "\tState: " << b.state << "\tTurn Count: " << b.turn_count / 4 + 1 << std::endl;
-		std::cout << b << std::endl;
+		//std::cout << b << std::endl;
+		pretty_print_board(b);
 
 		display_moves(b);
+		computer_move_suggestion(b);
 
 		std::vector<int_fast8_t> locations;
 		try {
@@ -183,7 +222,8 @@ int main(void)
 
 		if (winner_info.second != NO_WINNER) {
 			std::cout << FF_SUCCESS_STRING(winner_info.first << " wins!\tWin Condition: " << winner_info.second) << std::endl;
-			std::cout << b << std::endl;
+			//std::cout << b << std::endl;
+			pretty_print_board(b);
 			break;
 		}
 	}

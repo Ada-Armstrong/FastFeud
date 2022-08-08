@@ -1,4 +1,12 @@
 #include <limits>
 #include "ab_node.h"
 
-float alphabeta(AB_Node *node, int depth, float alpha, float beta, Team maximizing);
+struct Move {
+	union data {
+		action act;
+		std::pair<int_fast16_t, int_fast16_t> swap;
+	};
+	Turn_T type;
+};
+
+int suggest_move(Board &state, int depth);

@@ -1,8 +1,15 @@
 #include "ab_node.h"
 
 
-AB_Node::AB_Node(Board cpy): state{cpy}, value{0}
+AB_Node::AB_Node(Board cpy, int index): move_index{index}, value{0}, state{cpy}
 {
+}
+
+AB_Node::~AB_Node()
+{
+	for (auto child : this->children) {
+		delete child;
+	}
 }
 
 bool AB_Node::is_leaf()
@@ -13,18 +20,19 @@ bool AB_Node::is_leaf()
 void AB_Node::expand()
 {
 	AB_Node *copy;
+	int counter = 0;
 
 	if (this->state.state == SWAP) {
 		auto swaps = this->state.generate_swaps();
 		for (auto &swap : swaps) {
-			copy = new AB_Node(Board(this->state));
+			copy = new AB_Node(Board(this->state), counter++);
 			copy->state.apply_swap(swap.first, swap.second);
 			this->children.emplace_back(copy);
 		}
 	} else {
 		auto actions = this->state.generate_actions();
 		for (auto &act : actions) {
-			copy = new AB_Node(Board(this->state));
+			copy = new AB_Node(Board(this->state), counter++);
 			copy->state.apply_action(act);
 			this->children.emplace_back(copy);
 		}

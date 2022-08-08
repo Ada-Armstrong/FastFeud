@@ -163,6 +163,132 @@ Board::Board()
 	this->damaged = 0;
 }
 
+Team char2team(char c)
+{
+	Team out = NONE;
+	switch (c) {
+		case 'b':
+			out = BLACK;
+			break;
+		case 'w':
+			out = WHITE;
+			break;
+		default:
+			break;
+	}
+	return out;
+}
+
+Piece char2piece(char c)
+{
+	Piece out = NUM_PIECES;
+	switch (c) {
+		case 'a':
+			out = ARCHER;
+			break;
+		case 'n':
+			out = KNIGHT;
+			break;
+		case 'k':
+			out = KING;
+			break;
+		case 'm':
+			out = MEDIC;
+			break;
+		case 'w':
+			out = WIZARD;
+			break;
+		case 's':
+			out = SHIELD;
+			break;
+		default:
+			break;
+	}
+	return out;
+}
+
+int piece_max_hp(Piece p)
+{
+	int out = 0;
+	switch (p) {
+		case ARCHER:
+		case KNIGHT:
+		case MEDIC:
+		case WIZARD:
+			out = 3;
+			break;
+		case KING:
+		case SHIELD:
+			out = 4;
+			break;
+		default:
+			break;
+	}
+	return out;
+}
+
+bool Board::load_file(std::string &filename)
+{
+	std::string line;
+	std::ifstream f(filename);
+	if (!std::getline(f >> std::ws, line, ';')) {
+		std::cerr << "FAILED TO READ FILE " << filename << std::endl;
+	}
+	std::cerr << line << std::endl;
+	
+	if (line.size() < 3) {
+		return false;
+	}
+	// set state
+	switch (line[0]) {
+		case 's':
+			this->state = SWAP;
+			break;
+		case 'a':
+			this->state = ACTION;
+			break;
+		default:
+			return false;
+	}
+	// set whose turn it is to play
+	this->to_play = char2team(line[1]);
+	if (this->to_play == NONE) {
+		return false;
+	}
+	// set the quarter turn count
+	this->turn_count = std::stoi(line.substr(2, line.size() - 2));
+	if (this->turn_count < 0) {
+		return false;
+	}
+	// set board pieces
+	int_fast8_t i;
+	for (i = 0; getline(f >> std::ws, line, ';'); ++i) {
+		std::cerr << line << std::endl;
+		if (i >= BOARD_SIZE) {
+			return false;
+		}
+		if (line.size() == 1 && line[0] == '.') {
+			// empty tile
+			this->place_piece(ARCHER, BLACK, 0, 0, i);
+		} else if (line.size() == 3) {
+			Team t = char2team(line[0]);
+			Piece p = char2piece(line[1]);
+			int hp = std::stoi(line.substr(2, 1));
+			int max_hp = piece_max_hp(p);
+			std::cerr << t << " " << p << " " << hp << " " << max_hp << std::endl;
+			if (t == NONE || p == NUM_PIECES || hp <= 0 || hp > max_hp) {
+				return false;
+			}
+			this->place_piece(p, t, hp, max_hp, i);
+		} else {
+			return false;
+		}
+	}
+	update_all_activity();
+
+	return true;
+}
+
 void Board::place_piece(Piece type, Team colour, int_fast8_t hp, int_fast8_t max_hp, int_fast8_t pos)
 {
 	assert(type != NUM_PIECES);
@@ -214,7 +340,6 @@ void Board::swap(int_fast8_t pos1, int_fast8_t pos2)
 	int_fast16_t loc2update = this->lookup.neighbours[pos1] | this->lookup.neighbours[pos2] | bitmap_pos1 | bitmap_pos2;
 
 	while (loc2update) {
-		//std::cout << (int)loc2update << std::endl;
 		// find first bit location
 		int_fast8_t loc = ffs(loc2update) - 1;
 		// remove loc
@@ -512,9 +637,9 @@ std::ostream &operator<<(std::ostream &os, const Board &b)
 	for (int i = 0; i < BOARD_SIZE; ++i) {
 		piece_stats stats = b.info[i];
 		if (stats.hp > 0) {
-			os << "| " << stats.team << " " << stats.type << " " << (int)stats.hp << " " << (int)stats.max_hp << " ";
+			os << "| " << stats.team << " " << stats.type << " " << (int)stats.hp << " " << (int)stats.max_hp << " " << (stats.active ? "*" : ".");
 		} else {
-			os << "| ..... . . . ";
+			os << "| ..... . . . .";
 		}
 		if (i % BOARD_WIDTH == BOARD_WIDTH - 1) {
 			os << "|\n";

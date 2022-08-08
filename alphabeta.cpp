@@ -57,3 +57,25 @@ float alphabeta(AB_Node *node, int depth, float alpha, float beta, Team maximizi
 
 	return val;
 }
+
+int suggest_move(Board &state, int depth)
+{
+	AB_Node *root = new AB_Node{state};
+
+	alphabeta(root, depth, -std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), state.to_play);
+
+	// find child with largest value
+	int index = 0;
+	float val = -std::numeric_limits<float>::infinity();
+
+	for (auto child : root->children) {
+		if (child->value > val) {
+			val = child->value;
+			index = child->move_index;
+		}
+	}
+
+	delete root;
+
+	return index;
+}

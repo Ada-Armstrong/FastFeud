@@ -4,6 +4,8 @@
 #include <cassert>
 #include <vector>
 #include <iostream>
+#include <fstream>
+#include <string>
 
 #define BOARD_WIDTH 4
 #define BOARD_HEIGHT 4
@@ -134,6 +136,8 @@ class Board {
 	public:
 
 	Board();
+
+	bool load_file(std::string &f);
 
 	void update_activity(int_fast8_t pos);
 
