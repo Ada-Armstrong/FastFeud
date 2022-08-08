@@ -3,15 +3,22 @@
 
 float heuristic(AB_Node *node)
 {
-	float value = 0;
-	Team winner = node->state.winner();
+	float value = 0, points;
+	std::pair<Team, Win_Condition> winner_info = node->state.winner();
 
-	if (winner == BLACK) {
+	if (winner_info.first == BLACK) {
 		value = std::numeric_limits<float>::infinity();
-	} else if (winner == WHITE) {
+	} else if (winner_info.first == WHITE) {
 		value = -std::numeric_limits<float>::infinity();
-	} else {
+	} else if (winner_info.second == NO_WINNER) {
 		value = 0;
+		for (auto &tile : node->state.tile_info()) {
+			if (tile.hp <= 0) {
+				continue;
+			}
+			points = tile.active ? 2 * tile.hp : tile.hp;
+			value += points * (tile.team == BLACK ? 1 : -1);
+		}
 	}
 
 	return value;
@@ -21,7 +28,7 @@ float heuristic(AB_Node *node)
 float alphabeta(AB_Node *node, int depth, float alpha, float beta, Team maximizing)
 {
 	if (depth <= 0 or node->is_leaf()) {
-		node->value = heuristic(node);
+		node->value = heuristic(node) * (maximizing == BLACK ? 1 : -1);
 		return node->value;
 	}
 

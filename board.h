@@ -28,14 +28,23 @@ enum Piece {
 
 enum Turn_T {
 	SWAP = 0,
-	ACTION,
+	ACTION
 };
 
+enum Win_Condition {
+	ISOLATED,
+	KING_DEAD,
+	SURRENDERED,
+	NO_WINNER
+};
+
+// EMPTY tiles are represented by a struct that has hp <= 0
 struct piece_stats {
 	int_fast8_t hp;
 	int_fast8_t max_hp;
 	Team team;
 	Piece type;
+	bool active;
 };
 
 struct action {
@@ -56,11 +65,18 @@ class LookupTables {
 	std::vector<std::vector<int_fast8_t>> n_k_subset[4][4];
 
 	private:
-
+	/* Description: Populates the neighbours table. Should be called once.
+	 * Args: None
+	 */
 	void compute_neighbours();
-
+	/* Description: Populates the archer attack table. Should be called once.
+	 * Args: None
+	 */
 	void compute_archer_attacks();
-
+	/* Description: Computes all k element subsets of an array of length n, for k = 1,...,4
+	 * 		and n = 1,...,4. Should be called once.
+	 * Args: None
+	 */
 	void compute_n_k_subsets();
 
 	public:
@@ -135,6 +151,8 @@ class Board {
 
 	std::vector<action> generate_actions();
 
+	std::vector<piece_stats> tile_info();
+
 	bool isolated(Team t);
 
 	bool king_dead(Team t);
@@ -143,7 +161,7 @@ class Board {
 
 	bool gameover();
 
-	Team winner();
+	std::pair<Team, Win_Condition> winner();
 
 	friend std::ostream &operator<<(std::ostream &os, const Board &b);
 };
@@ -156,3 +174,5 @@ std::ostream &operator<<(std::ostream &os, const Team &t);
 std::ostream &operator<<(std::ostream &os, const Piece &p);
 
 std::ostream &operator<<(std::ostream &os, const Turn_T &t);
+
+std::ostream &operator<<(std::ostream &os, const Win_Condition &w);

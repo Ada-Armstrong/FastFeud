@@ -1,7 +1,12 @@
+#include <stdlib.h>
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>
 #include "board.h"
+
+#define FF_ERROR_STRING(msg) "\033[31;1m" << msg << "\033[0m"
+#define FF_SUCCESS_STRING(msg) "\033[32;1m" << msg << "\033[0m"
 
 
 const std::string index2rank_file[] = {
@@ -60,41 +65,20 @@ std::vector<int_fast8_t> get_input()
 	return out;
 }
 
-int team_isolated(Board &b)
-{
-	int out = -1;
-
-	if (b.isolated(BLACK) && b.isolated(WHITE)) {
-		out = 2;
-		std::cout << "Both teams isolated, its a tie!" << std::endl;
-	} else if (b.isolated(BLACK)) {
-		out = 0;
-		std::cout << "Black isolated, White wins!" << std::endl;
-	} else if (b.isolated(WHITE)) {
-		out = 1;
-		std::cout << "White isolated, Black wins!" << std::endl;
-	}
-
-	return out;
-}
-
 void display_moves(Board &b)
 {
 	if (b.state == SWAP) {
 		auto swaps = b.generate_swaps();
 		std::cout << "Swaps:";
 		for (auto &swap : swaps) {
-			//std::cout << " (" << (int)swap.first << ", " << (int)swap.second << ")";
 			std::cout << " (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
 		}
 	} else {
 		auto actions = b.generate_actions();
 		std::cout << "Actions:";
 		for (auto &action : actions) {
-			//std::cout <<" (" << (int)action.pos << ", [";
 			std::cout <<" (" << index2rank_file[action.pos] << ", [";
 			for (int i = 0; i < action.num_trgts; ++i) {
-				//std::cout << (int)action.trgts[i];
 				std::cout << index2rank_file[action.trgts[i]];
 				if (i != action.num_trgts - 1) {
 					std::cout << ", ";
@@ -106,16 +90,50 @@ void display_moves(Board &b)
 	std::cout << std::endl;
 }
 
+bool is_swap_valid(std::vector<int_fast8_t> swap, std::vector<std::pair<int_fast8_t, int_fast8_t>> valid_swaps)
+{
+	// order swap the way valid swaps are ordered (from least to greatest)
+	if (swap[0] > swap[1]) {
+		std::swap(swap[0], swap[1]);
+	}
+	for (auto &vs : valid_swaps) {
+		if (vs.first == swap[0] && vs.second == swap[1]) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool is_action_valid(action a, std::vector<action> valid_actions) {
+	// order action trgts from least to greatest
+	std::sort(a.trgts, a.trgts + a.num_trgts);
+	for (auto &va : valid_actions) {
+		bool differ = false;
+		if (va.pos == a.pos && va.num_trgts == a.num_trgts) {
+			for (int i = 0; i < va.num_trgts; ++i) {
+				if (va.trgts[i] != a.trgts[i]) {
+					differ = true;
+					break;
+				}	
+			}
+			if (!differ) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 int main(void)
 {
 	Board b;
 	setup_board(b);
 	
-	bool finished = false;
+	std::pair<Team, Win_Condition> winner_info{NONE, NO_WINNER};
 	
-	while (!finished) {
+	while (1) {
 		Team turn = b.to_play;
-		std::cout << "Turn: " << turn << "\nState: " << b.state << std::endl;
+		std::cout << "Turn: " << turn << "\tState: " << b.state << "\tTurn Count: " << b.turn_count / 4 + 1 << std::endl;
 		std::cout << b << std::endl;
 
 		display_moves(b);
@@ -123,28 +141,27 @@ int main(void)
 		std::vector<int_fast8_t> locations;
 		try {
 			locations = get_input();
+			std::cout << std::endl;
 		} catch (const std::invalid_argument &e) {
-			std::cout << "Bad input recieved" << std::endl;
+			std::cout << FF_ERROR_STRING("Bad input recieved...\n") << std::endl;
 			continue;
 		}
 
 		if (b.state == SWAP) {
 			if (locations.size() != 2) {
-				std::cout << "Need two positions for swap, recieved " << locations.size() << std::endl;
+				std::cout << FF_ERROR_STRING("Need two positions for swap, recieved " << locations.size() << " positions...\n") << std::endl;
+				continue;
+			} else if (!is_swap_valid(locations, b.generate_swaps())) {
+				std::cout << FF_ERROR_STRING("Invalid swap provided, try again...\n") << std::endl;
 				continue;
 			}
 
 			b.apply_swap(locations[0], locations[1]);
-
-			if (team_isolated(b) > -1) {
-				finished = true;
-				std::cout << b << std::endl;
-			}
 		} else {
 			if (locations.size() < 2) {
-				std::cout << "Need at least two positions for action, recieved " << locations.size() << std::endl;
+				std::cout << FF_ERROR_STRING("Need at least two positions for action, recieved " << locations.size() << " positions...\n") << std::endl;
 				continue;
-			}
+			} 
 
 			action a;
 			a.pos = locations[0];
@@ -153,21 +170,21 @@ int main(void)
 			for (int i = 1; i < locations.size(); ++i) {
 				a.trgts[i-1] = locations[i];
 			}
+			
+			if (!is_action_valid(a, b.generate_actions())) {
+				std::cout << FF_ERROR_STRING("Invalid action provided, try again...\n") << std::endl;
+				continue;
+			}
 
 			b.apply_action(a);
+		}
 
-			if (team_isolated(b) > -1) {
-				finished = true;
-				std::cout << b << std::endl;
-			} else if (b.king_dead(b.to_play)) { // since action is applied to_play will be next player
-				finished = true;
-				std::cout << b.to_play << " king is dead!" << std::endl;
-				std::cout << b << std::endl;
-			} else if (b.surrendered(turn)) {
-				finished = true;
-				std::cout << turn << " surrendered!" << std::endl;
-				std::cout << b << std::endl;
-			}
+		winner_info = b.winner();
+
+		if (winner_info.second != NO_WINNER) {
+			std::cout << FF_SUCCESS_STRING(winner_info.first << " wins!\tWin Condition: " << winner_info.second) << std::endl;
+			std::cout << b << std::endl;
+			break;
 		}
 	}
 

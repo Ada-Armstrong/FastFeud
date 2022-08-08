@@ -96,7 +96,7 @@ void LookupTables::compute_n_k_subsets()
 	for (int n = 1; n <= 4; ++n) {
 		for (int k = 1; k <= 4; ++k) {
 			data.resize(k);
-			comb(this->n_k_subset[n - 1][ k - 1], data, n, k, 0, 0);
+			comb(this->n_k_subset[n - 1][k - 1], data, n, k, 0, 0);
 		}
 	}
 }
@@ -130,6 +130,7 @@ void Board::update_activity(int_fast8_t pos)
 	const Team t = this->info[pos].team;
 	// will be 1 if active and 0 otherwise
 	const int_fast16_t a = (this->team_bitmaps[t] & this->lookup.neighbours[pos]) != 0;
+	this->info[pos].active = a;
 	// unset pos bit and set pos bit to be a
 	this->active[t] &= ~(1 << pos);
 	this->active[t] |= a << pos;
@@ -168,11 +169,15 @@ void Board::place_piece(Piece type, Team colour, int_fast8_t hp, int_fast8_t max
 	assert(colour != NUM_TEAMS);
 	assert(inbound(pos));
 	// set the piece on the corresponding bitboard
-	this->pieces[colour][type] |= 1 << pos;
+	if (hp > 0) {
+		this->pieces[colour][type] |= 1 << pos;
+	}
+
 	this->info[pos].hp = hp;
 	this->info[pos].max_hp = max_hp;
 	this->info[pos].team = colour;
 	this->info[pos].type = type;
+	this->info[pos].active = false;
 
 	const int_fast16_t d = hp > 0 && hp < max_hp;
 	this->damaged &= d << pos;
@@ -306,12 +311,11 @@ void Board::generate_swaps_at(
 		int_fast8_t loc = ffs(swapable) - 1;
 		swapable &= ~(1 << loc);
 
+		edge.first = pos;
+		edge.second = loc;
+
 		if (pos > loc) {
-			edge.first = loc;
-			edge.second = pos;
-		} else {
-			edge.first = pos;
-			edge.second = loc;
+			std::swap(edge.first, edge.second);
 		}
 		if (!seen[edge.first][edge.second]) {
 			swaps.push_back(edge);
@@ -418,7 +422,9 @@ std::vector<action> Board::generate_actions()
 	std::vector<action> actions;
 	actions.reserve(20);
 
-	int_fast16_t candidates = (this->team_bitmaps[this->to_play] ^ this->pieces[this->to_play][SHIELD]) & this->active[this->to_play];
+	// pieces on the active team except shield that are active
+	int_fast16_t candidates = (this->team_bitmaps[this->to_play] ^ this->pieces[this->to_play][SHIELD])
+		& this->active[this->to_play];
 
 	while (candidates) {
 		int_fast8_t loc = ffs(candidates) - 1;
@@ -428,6 +434,11 @@ std::vector<action> Board::generate_actions()
 	}
 
 	return actions;
+}
+
+std::vector<piece_stats> Board::tile_info()
+{
+	return std::vector<piece_stats>(this->info, this->info + BOARD_SIZE);
 }
 
 bool Board::isolated(Team t)
@@ -459,28 +470,41 @@ bool Board::gameover()
 		|| surrendered(this->to_play) || surrendered(opponent);
 }
 
-Team Board::winner()
+std::pair<Team, Win_Condition> Board::winner()
 {
+	std::pair<Team, Win_Condition> out{NONE, NO_WINNER};
+
 	if (!this->gameover()) {
-		return NONE;
+		return out;
 	}
 
 	const bool bi = this->isolated(BLACK);
 	const bool wi = this->isolated(WHITE);
 
 	if (bi && wi) {
-		return NONE;
+		out.first = NONE;
+		out.second = ISOLATED;
 	} else if (bi) {
-		return WHITE;
+		out.first = WHITE;
+		out.second = ISOLATED;
 	} else if (wi) {
-		return BLACK;
-	} else if (this->surrendered(BLACK) || this->king_dead(BLACK)) {
-		return WHITE;
-	} else if (this->surrendered(WHITE) || this->king_dead(WHITE)) {
-		return BLACK;
+		out.first = BLACK;
+		out.second = ISOLATED;
+	} else if (this->surrendered(BLACK)) {
+		out.first = WHITE;
+		out.second = SURRENDERED;
+	} else if (this->king_dead(BLACK)) {
+		out.first = WHITE;
+		out.second = KING_DEAD;
+	} else if (this->surrendered(WHITE)) {
+		out.first = BLACK;
+		out.second = SURRENDERED;
+	} else if (this->king_dead(WHITE)) {
+		out.first = BLACK;
+		out.second = KING_DEAD;
 	}
 
-	return NONE;
+	return out;
 }
 
 std::ostream &operator<<(std::ostream &os, const Board &b)
@@ -549,6 +573,21 @@ std::ostream &operator<<(std::ostream &os, const Turn_T &t)
 		os << "SWAP";
 	} else {
 		os << "ACTION";
+	}
+
+	return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const Win_Condition &w)
+{
+	if (w == ISOLATED) {
+		os << "ISOLATED";
+	} else if (w == KING_DEAD) {
+		os << "KING DEAD";
+	} else if (w == SURRENDERED) {
+		os << "SURRENDERED";
+	} else {
+		os << "NO WINNER";
 	}
 
 	return os;
