@@ -20,30 +20,6 @@ const std::string index2rank_file[] = {
 	"A4", "B4", "C4", "D4"
 };
 
-void setup_board(Board &b)
-{
-	// black pieces
-	b.place_piece(ARCHER, BLACK, 3, 3, 0);
-	b.place_piece(KING, BLACK, 4, 4, 1);
-	b.place_piece(MEDIC, BLACK, 3, 3, 2);
-	b.place_piece(ARCHER, BLACK, 3, 3, 3);
-	b.place_piece(KNIGHT, BLACK, 3, 3, 4);
-	b.place_piece(SHIELD, BLACK, 3, 4, 5);
-	b.place_piece(WIZARD, BLACK, 3, 3, 6);
-	b.place_piece(KNIGHT, BLACK, 3, 3, 7);
-	// white pieces
-	b.place_piece(KNIGHT, WHITE, 3, 3, 8);
-	b.place_piece(SHIELD, WHITE, 4, 4, 9);
-	b.place_piece(WIZARD, WHITE, 3, 3, 10);
-	b.place_piece(KNIGHT, WHITE, 3, 3, 11);
-	b.place_piece(ARCHER, WHITE, 3, 3, 12);
-	b.place_piece(KING, WHITE, 4, 4, 13);
-	b.place_piece(MEDIC, WHITE, 3, 3, 14);
-	b.place_piece(ARCHER, WHITE, 3, 3, 15);
-
-	b.update_all_activity();
-}
-
 std::vector<int_fast8_t> get_input()
 {
 	std::string pos;
@@ -119,7 +95,8 @@ void display_moves(Board &b)
 
 void computer_move_suggestion(Board &b)
 {
-	std::cout << "Suggested Move Index: " << suggest_move(b, 8) << std::endl;
+	const int depth = 6;
+	std::cout << "Suggested Move Index: " << suggest_move(b, depth) << std::endl;
 }
 
 bool is_swap_valid(std::vector<int_fast8_t> swap, std::vector<std::pair<int_fast8_t, int_fast8_t>> valid_swaps)
@@ -164,14 +141,12 @@ int main(int argc, char *argv[])
 		filename = argv[1];
 	}
 	b.load_file(filename);
-	//setup_board(b);
 	
 	std::pair<Team, Win_Condition> winner_info{NONE, NO_WINNER};
 	
 	while (1) {
 		Team turn = b.to_play;
 		std::cout << "Turn: " << turn << "\tState: " << b.state << "\tTurn Count: " << b.turn_count / 4 + 1 << std::endl;
-		//std::cout << b << std::endl;
 		pretty_print_board(b);
 
 		display_moves(b);
@@ -188,7 +163,8 @@ int main(int argc, char *argv[])
 
 		if (b.state == SWAP) {
 			if (locations.size() != 2) {
-				std::cout << FF_ERROR_STRING("Need two positions for swap, recieved " << locations.size() << " positions...\n") << std::endl;
+				std::cout << FF_ERROR_STRING("Need two positions for swap, recieved "
+						<< locations.size() << " positions...\n") << std::endl;
 				continue;
 			} else if (!is_swap_valid(locations, b.generate_swaps())) {
 				std::cout << FF_ERROR_STRING("Invalid swap provided, try again...\n") << std::endl;
@@ -198,7 +174,8 @@ int main(int argc, char *argv[])
 			b.apply_swap(locations[0], locations[1]);
 		} else {
 			if (locations.size() < 2) {
-				std::cout << FF_ERROR_STRING("Need at least two positions for action, recieved " << locations.size() << " positions...\n") << std::endl;
+				std::cout << FF_ERROR_STRING("Need at least two positions for action, recieved "
+						<< locations.size() << " positions...\n") << std::endl;
 				continue;
 			} 
 
@@ -221,8 +198,8 @@ int main(int argc, char *argv[])
 		winner_info = b.winner();
 
 		if (winner_info.second != NO_WINNER) {
-			std::cout << FF_SUCCESS_STRING(winner_info.first << " wins!\tWin Condition: " << winner_info.second) << std::endl;
-			//std::cout << b << std::endl;
+			std::cout << FF_SUCCESS_STRING(winner_info.first << " wins!\tWin Condition: " << winner_info.second)
+				<< std::endl;
 			pretty_print_board(b);
 			break;
 		}

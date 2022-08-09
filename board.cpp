@@ -234,7 +234,6 @@ bool Board::load_file(std::string &filename)
 	if (!std::getline(f >> std::ws, line, ';')) {
 		std::cerr << "FAILED TO READ FILE " << filename << std::endl;
 	}
-	std::cerr << line << std::endl;
 	
 	if (line.size() < 3) {
 		return false;
@@ -263,7 +262,6 @@ bool Board::load_file(std::string &filename)
 	// set board pieces
 	int_fast8_t i;
 	for (i = 0; getline(f >> std::ws, line, ';'); ++i) {
-		std::cerr << line << std::endl;
 		if (i >= BOARD_SIZE) {
 			return false;
 		}
@@ -275,7 +273,6 @@ bool Board::load_file(std::string &filename)
 			Piece p = char2piece(line[1]);
 			int hp = std::stoi(line.substr(2, 1));
 			int max_hp = piece_max_hp(p);
-			std::cerr << t << " " << p << " " << hp << " " << max_hp << std::endl;
 			if (t == NONE || p == NUM_PIECES || hp <= 0 || hp > max_hp) {
 				return false;
 			}
