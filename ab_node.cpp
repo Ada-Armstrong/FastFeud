@@ -19,6 +19,10 @@ bool AB_Node::is_leaf()
 
 void AB_Node::expand()
 {
+	// check if the node has previously been expanded
+	if (this->children.size()) {
+		return;
+	}
 	AB_Node *copy;
 	int counter = 0;
 

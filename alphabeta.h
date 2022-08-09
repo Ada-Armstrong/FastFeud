@@ -1,4 +1,5 @@
 #include <limits>
+#include <algorithm>
 #include "ab_node.h"
 
 struct Move {

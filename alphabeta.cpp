@@ -36,6 +36,9 @@ float alphabeta(AB_Node *node, int depth, float alpha, float beta, Team maximizi
 	node->expand();
 
 	if (node->state.to_play == maximizing) {
+		// sort children based on most promising from previous searches, in this case from greatest to smallest value
+		std::sort(node->children.begin(), node->children.end(), [](AB_Node *a, AB_Node *b) { return a->value > b->value; });
+
 		val = -std::numeric_limits<float>::infinity();
 		for (auto &child : node->children) {
 			val = std::max(val, alphabeta(child, depth - 1, alpha, beta, maximizing));
@@ -45,6 +48,9 @@ float alphabeta(AB_Node *node, int depth, float alpha, float beta, Team maximizi
 		}
 		node->value = val;
 	} else {
+		// sort children based on most promising from previous searches, in this case from smallest to greatest value
+		std::sort(node->children.begin(), node->children.end(), [](AB_Node *a, AB_Node *b) { return a->value < b->value; });
+		
 		val = std::numeric_limits<float>::infinity();
 		for (auto &child : node->children) {
 			val = std::min(val, alphabeta(child, depth - 1, alpha, beta, maximizing));
@@ -62,19 +68,19 @@ int suggest_move(Board &state, int depth)
 {
 	AB_Node *root = new AB_Node{state};
 
-	alphabeta(root, depth, -std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), state.to_play);
-
-	// find child with largest value
-	int index = 0;
-	float val = -std::numeric_limits<float>::infinity();
-
-	for (auto child : root->children) {
-		if (child->value > val) {
-			val = child->value;
-			index = child->move_index;
+	// use iterative deepening depth first search
+	for (int d = 0; d <= depth; ++d) {
+		int ret = alphabeta(root, d, -std::numeric_limits<float>::infinity(),
+				std::numeric_limits<float>::infinity(), state.to_play);
+		// found a winning position or all positions are losing
+		if (ret == std::numeric_limits<float>::infinity() || ret == -std::numeric_limits<float>::infinity()) {
+			break;
 		}
 	}
 
+	auto max_child = *std::max_element(root->children.begin(), root->children.end(), 
+			[](AB_Node *a, AB_Node *b) { return a->value < b->value; });
+	const int index = max_child->move_index;
 	delete root;
 
 	return index;

@@ -47,22 +47,22 @@ void LookupTables::compute_archer_attacks()
 			if (pos == shield_pos)
 				continue;
 			bb = 0;
-			for (int i = pos + 1; i > 0 && i / BOARD_WIDTH == pos / BOARD_WIDTH; ++i) {
+			for (int i = pos + 1; i >= 0 && i / BOARD_WIDTH == pos / BOARD_WIDTH; ++i) {
 				bb |= 1 << i;
 				if (i == shield_pos)
 					break;
 			}
-			for (int i = pos - 1; i > 0 && i / BOARD_WIDTH == pos / BOARD_WIDTH; --i) {
+			for (int i = pos - 1; i >= 0 && i / BOARD_WIDTH == pos / BOARD_WIDTH; --i) {
 				bb |= 1 << i;
 				if (i == shield_pos)
 					break;
 			}	
-			for (int i = pos + BOARD_WIDTH; i > 0 && i < BOARD_SIZE; i += BOARD_WIDTH) {
+			for (int i = pos + BOARD_WIDTH; i >= 0 && i < BOARD_SIZE; i += BOARD_WIDTH) {
 				bb |= 1 << i;
 				if (i == shield_pos)
 					break;
 			}
-			for (int i = pos - BOARD_WIDTH; i > 0 && i < BOARD_SIZE; i -= BOARD_WIDTH) {
+			for (int i = pos - BOARD_WIDTH; i >= 0 && i < BOARD_SIZE; i -= BOARD_WIDTH) {
 				bb |= 1 << i;
 				if (i == shield_pos)
 					break;
@@ -321,12 +321,15 @@ void Board::swap(int_fast8_t pos1, int_fast8_t pos2)
 	const Piece p1 = this->info[pos1].type;
 	const Piece p2 = this->info[pos2].type;
 
-	// unset bit at pos1 and set bit at pos2
-	this->pieces[t1][p1] &= ~bitmap_pos1;
-	this->pieces[t1][p1] |= bitmap_pos2;
-	// unset bit at pos2 and set bit at pos1
-	this->pieces[t2][p2] &= ~bitmap_pos2;
-	this->pieces[t2][p2] |= bitmap_pos1;
+	// if the team and piece type are the same don't need to do anything
+	if (t1 != t2 || p1 != p2) {
+		// unset bit at pos1 and set bit at pos2
+		this->pieces[t1][p1] &= ~bitmap_pos1;
+		this->pieces[t1][p1] |= bitmap_pos2;
+		// unset bit at pos2 and set bit at pos1
+		this->pieces[t2][p2] &= ~bitmap_pos2;
+		this->pieces[t2][p2] |= bitmap_pos1;
+	}
 
 	std::swap(this->info[pos1], this->info[pos2]);
 
@@ -603,16 +606,7 @@ std::pair<Team, Win_Condition> Board::winner()
 	const bool bi = this->isolated(BLACK);
 	const bool wi = this->isolated(WHITE);
 
-	if (bi && wi) {
-		out.first = NONE;
-		out.second = ISOLATED;
-	} else if (bi) {
-		out.first = WHITE;
-		out.second = ISOLATED;
-	} else if (wi) {
-		out.first = BLACK;
-		out.second = ISOLATED;
-	} else if (this->surrendered(BLACK)) {
+	if (this->surrendered(BLACK)) {
 		out.first = WHITE;
 		out.second = SURRENDERED;
 	} else if (this->king_dead(BLACK)) {
@@ -624,6 +618,15 @@ std::pair<Team, Win_Condition> Board::winner()
 	} else if (this->king_dead(WHITE)) {
 		out.first = BLACK;
 		out.second = KING_DEAD;
+	} else if (bi && wi) {
+		out.first = NONE;
+		out.second = ISOLATED;
+	} else if (bi) {
+		out.first = WHITE;
+		out.second = ISOLATED;
+	} else if (wi) {
+		out.first = BLACK;
+		out.second = ISOLATED;
 	}
 
 	return out;

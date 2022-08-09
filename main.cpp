@@ -53,9 +53,11 @@ void pretty_print_board(Board &b)
 	for (auto &stats : tiles) {
 		if (stats.hp > 0) {
 			if (stats.active) {
-				std::cout << "| " << FF_ACTIVE_STRING(stats.team << " " << stats.type << " " << (int)stats.hp << " " << (int)stats.max_hp);
+				std::cout << "| " << FF_ACTIVE_STRING(stats.team << " " << stats.type << " "
+						<< (int)stats.hp << " " << (int)stats.max_hp);
 			} else {
-				std::cout << "| " << FF_INACTIVE_STRING(stats.team << " " << stats.type << " " << (int)stats.hp << " " << (int)stats.max_hp);
+				std::cout << "| " << FF_INACTIVE_STRING(stats.team << " " << stats.type << " "
+						<< (int)stats.hp << " " << (int)stats.max_hp);
 			}
 		} else {
 			std::cout << "|" << FF_INACTIVE_STRING(" ..... . . .");
@@ -93,9 +95,8 @@ void display_moves(Board &b)
 	std::cout << std::endl;
 }
 
-void computer_move_suggestion(Board &b)
+void computer_move_suggestion(Board &b, int depth)
 {
-	const int depth = 6;
 	std::cout << "Suggested Move Index: " << suggest_move(b, depth) << std::endl;
 }
 
@@ -136,6 +137,7 @@ bool is_action_valid(action a, std::vector<action> valid_actions) {
 int main(int argc, char *argv[])
 {
 	Board b;
+	int search_depth = 8;
 	std::string filename("../positions/default1.txt");
 	if (argc == 2) {
 		filename = argv[1];
@@ -150,7 +152,7 @@ int main(int argc, char *argv[])
 		pretty_print_board(b);
 
 		display_moves(b);
-		computer_move_suggestion(b);
+		computer_move_suggestion(b, search_depth);
 
 		std::vector<int_fast8_t> locations;
 		try {
