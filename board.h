@@ -25,7 +25,8 @@ enum Piece {
 	ARCHER,
 	KNIGHT,
 	SHIELD,
-	NUM_PIECES
+	NUM_PIECES,
+	EMPTY
 };
 
 enum Turn_T {
@@ -122,49 +123,103 @@ class Board {
 	// tracks pieces that don't have full hp and that are alive
 	int_fast16_t damaged;
 
+	/* Description: returns true if pos is within the board.
+	 * Args: pos - the position to check.
+	 */
 	bool inbound(int_fast8_t pos);
-
+	/* Description: populates the team_bitmaps bitmap according to the pieces array.
+	 * Args: None
+	 */
 	void compute_team_bitmaps();
-
+	/* Description: generates the valid swaps at pos and adds them to the swaps vector.
+	 * Args: pos - the position to generate the swaps for.
+	 * 	 swaps - the vector to append the results to.
+	 * 	 seen - boolean array used to track duplicate swaps (i.e. [A1, A2] == [A2, A1])
+	 */
 	void generate_swaps_at(
 			int_fast8_t pos,
 			std::vector<std::pair<int_fast8_t, int_fast8_t>> &swaps,
 			int seen[BOARD_SIZE][BOARD_SIZE]);
-
+	/* Description: generates the valid actions at pos and adds them to the actions vector.
+	 * Args: pos - the position to generate the actions for.
+	 * 	 actions - the vector to append the results to.
+	 */
 	void generate_actions_at(int_fast8_t pos, std::vector<action> &actions);
 
 	public:
 
 	Board();
-
+	/* Description: Loads a game state from the given file. Return true if successful else false.
+	 * Args: f - the file to load the state from.
+	 */
 	bool load_file(std::string &f);
-
+	/* Description: Returns the number of skips in a row Team t has used.
+	 * Args: t - the team to check.
+	 */
+	int get_passes(Team t);
+	/* Description: Updates the active flags of the piece at pos.
+	 * Args: pos - the position to update.
+	 */
 	void update_activity(int_fast8_t pos);
-
+	/* Description: Updates all of the active flags of all pieces.
+	 * Args: None
+	 */
 	void update_all_activity();
-
+	/* Description: place the piece with the given stats at pos.
+	 * Args: type - the type of the piece to place.
+	 * 	 colour - the team that the piece belongs to.
+	 * 	 hp - the amount of health points the piece will have.
+	 * 	 max_hp - the maximum hp of the piece.
+	 * 	 pos - the position to place the piece.
+	 */
 	void place_piece(Piece type, Team colour, int_fast8_t hp, int_fast8_t max_hp, int_fast8_t pos);
-
+	/* Description: swaps the pieces at pos1 and pos2.
+	 * Args: pos1 - position of first piece.
+	 * 	 pos2 - position of second piece.
+	 */
 	void swap(int_fast8_t pos1, int_fast8_t pos2);
-
+	/* Description: performs a swap and updates the turn_count and state.
+	 * Args: pos1 - position of first piece.
+	 * 	 pos2 - position of second piece.
+	 */
 	void apply_swap(int_fast8_t pos1, int_fast8_t pos2);
-
+	/* Description: performs the action and updates the turn_count and state.
+	 * Args: a - the action to be performed.
+	 */
 	void apply_action(action &a);
-
+	/* Description: returns a vector of valid swaps for this board state. 
+	 * Args: None
+	 */
 	std::vector<std::pair<int_fast8_t, int_fast8_t>> generate_swaps();
-
+	/* Description: returns a vector of valid actions for this board state.
+	 * Args: None
+	 */
 	std::vector<action> generate_actions();
-
+	/* Description: returns a vector of piece information for each tile.
+	 * Args: None
+	 */
 	std::vector<piece_stats> tile_info();
-
+	/* Description: returns true if Team t is isolated in this state (no active pieces).
+	 * Args: t - the team to check.
+	 */
 	bool isolated(Team t);
-
+	/* Description: returns true if Team t's king is dead in this state.
+	 * Args: t - the team to check.
+	 */
 	bool king_dead(Team t);
-
+	/* Description: returns true if Team t has exceed the maximum number of skips (2). 
+	 * Args: t - the team to check.
+	 */
 	bool surrendered(Team t);
-
+	/* Description: returns true if either of the teams are isolated, king_dead, or surrendered.
+	 * Args: None
+	 */
 	bool gameover();
-
+	/* Description: returns the winner as a pair with the first element being the winning team and
+	 * 		the second being the win condition (ISOLATED, KING_DEAD, SURRENDERED). If there
+	 * 		is no winner the first element is set to NONE.
+	 * Args: None
+	 */
 	std::pair<Team, Win_Condition> winner();
 
 	friend std::ostream &operator<<(std::ostream &os, const Board &b);

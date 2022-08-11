@@ -267,7 +267,7 @@ bool Board::load_file(std::string &filename)
 		}
 		if (line.size() == 1 && line[0] == '.') {
 			// empty tile
-			this->place_piece(ARCHER, BLACK, 0, 0, i);
+			this->place_piece(EMPTY, NONE, 0, 0, i);
 		} else if (line.size() == 3) {
 			Team t = char2team(line[0]);
 			Piece p = char2piece(line[1]);
@@ -284,6 +284,12 @@ bool Board::load_file(std::string &filename)
 	update_all_activity();
 
 	return true;
+}
+
+int Board::get_passes(Team t)
+{
+	assert(t != NUM_TEAMS || t != NONE);
+	return this->passes[t];
 }
 
 void Board::place_piece(Piece type, Team colour, int_fast8_t hp, int_fast8_t max_hp, int_fast8_t pos)
@@ -361,58 +367,67 @@ void Board::apply_swap(int_fast8_t pos1, int_fast8_t pos2)
 void Board::apply_action(action &a)
 {
 	assert(this->state == ACTION);
-	assert(inbound(a.pos));
-	for (int i = 0; i < a.num_trgts; ++i) {
-		assert(inbound(a.trgts[i]));
-	}
 
-	Team other_team = static_cast<Team>(1 - this->info[a.pos].team);
-	const Piece p = this->info[a.pos].type;
-	int_fast16_t d, update = 0;
-	piece_stats *stats;
+	Team other_team = static_cast<Team>(1 - this->to_play);
 
-	switch (p) {
-		case KING:
-		case ARCHER:
-		case KNIGHT:
-			for (int i = 0; i < a.num_trgts; ++i) {
-				stats = &(this->info[a.trgts[i]]);
-				stats->hp -= 1;
-				this->damaged &= ~(1 << a.trgts[i]);
-				if (stats->hp > 0) {
-					this->damaged |= 1 << a.trgts[i];
-				} else {
-					// piece is dead, remove from pieces, team, and active bitmap
-					// add neighbours who are teammates to update bitmap
-					this->pieces[stats->team][stats->type] &= ~(1 << a.trgts[i]);
-					this->team_bitmaps[other_team] &= ~(1 << a.trgts[i]);
-					this->active[other_team] &= ~(1 << a.trgts[i]);
-					update |= this->lookup.neighbours[a.trgts[i]] & this->team_bitmaps[other_team];
+	if (a.pos < 0 && a.num_trgts == 0) {
+		// skip action
+		this->passes[this->to_play] += 1;
+	} else {
+		assert(inbound(a.pos));
+		assert(this->to_play == this->info[a.pos].team);
+
+		for (int i = 0; i < a.num_trgts; ++i) {
+			assert(inbound(a.trgts[i]));
+		}
+
+		const Piece p = this->info[a.pos].type;
+		int_fast16_t d, update = 0;
+		piece_stats *stats;
+
+		switch (p) {
+			case KING:
+			case ARCHER:
+			case KNIGHT:
+				for (int i = 0; i < a.num_trgts; ++i) {
+					stats = &(this->info[a.trgts[i]]);
+					stats->hp -= 1;
+					this->damaged &= ~(1 << a.trgts[i]);
+					if (stats->hp > 0) {
+						this->damaged |= 1 << a.trgts[i];
+					} else {
+						// piece is dead, remove from pieces, team, and active bitmap
+						// add neighbours who are teammates to update bitmap
+						this->pieces[stats->team][stats->type] &= ~(1 << a.trgts[i]);
+						this->team_bitmaps[other_team] &= ~(1 << a.trgts[i]);
+						this->active[other_team] &= ~(1 << a.trgts[i]);
+						update |= this->lookup.neighbours[a.trgts[i]] & this->team_bitmaps[other_team];
+					}
 				}
-			}
-			// update activity
-			while (update) {
-				int_fast8_t loc = ffs(update) - 1;
-				update &= ~(1 << loc);
-				update_activity(loc);
-			}
-			break;
-		case MEDIC:
-			for (int i = 0; i < a.num_trgts; ++i) {
-				stats = &(this->info[a.trgts[i]]);
-				stats->hp += 1;
-				this->damaged &= ~(1 << a.trgts[i]);
-				d = stats->hp < stats->max_hp;
-				this->damaged |= d << a.trgts[i];
-			}
-			break;
-		case WIZARD:
-			swap(a.pos, a.trgts[0]);
-			break;
-		case SHIELD:
-			assert(0);
+				// update activity
+				while (update) {
+					int_fast8_t loc = ffs(update) - 1;
+					update &= ~(1 << loc);
+					update_activity(loc);
+				}
+				break;
+			case MEDIC:
+				for (int i = 0; i < a.num_trgts; ++i) {
+					stats = &(this->info[a.trgts[i]]);
+					stats->hp += 1;
+					this->damaged &= ~(1 << a.trgts[i]);
+					d = stats->hp < stats->max_hp;
+					this->damaged |= d << a.trgts[i];
+				}
+				break;
+			case WIZARD:
+				swap(a.pos, a.trgts[0]);
+				break;
+			case SHIELD:
+				assert(0);
+		}
+		this->passes[this->to_play] = 0;
 	}
-
 	// update game state
 	this->state = SWAP;
 	this->turn_count += 1;
@@ -545,7 +560,7 @@ void Board::generate_actions_at(int_fast8_t pos, std::vector<action> &actions)
 std::vector<action> Board::generate_actions()
 {
 	std::vector<action> actions;
-	actions.reserve(20);
+	actions.reserve(21);
 
 	// pieces on the active team except shield that are active
 	int_fast16_t candidates = (this->team_bitmaps[this->to_play] ^ this->pieces[this->to_play][SHIELD])
@@ -557,6 +572,9 @@ std::vector<action> Board::generate_actions()
 
 		generate_actions_at(loc, actions);
 	}
+
+	// skip action
+	actions.push_back(action{-1, 0});
 
 	return actions;
 }
@@ -637,7 +655,8 @@ std::ostream &operator<<(std::ostream &os, const Board &b)
 	for (int i = 0; i < BOARD_SIZE; ++i) {
 		piece_stats stats = b.info[i];
 		if (stats.hp > 0) {
-			os << "| " << stats.team << " " << stats.type << " " << (int)stats.hp << " " << (int)stats.max_hp << " " << (stats.active ? "*" : ".");
+			os << "| " << stats.team << " " << stats.type << " " << (int)stats.hp << " "
+				<< (int)stats.max_hp << " " << (stats.active ? "*" : ".");
 		} else {
 			os << "| ..... . . . .";
 		}
@@ -655,8 +674,10 @@ std::ostream &operator<<(std::ostream &os, const Team &t)
 
 	if (t == BLACK) {
 		os << "BLACK";
-	} else {
+	} else if (t == WHITE) {
 		os << "WHITE";
+	} else {
+		os << "EMPTY";
 	}
 
 	return os;
@@ -685,6 +706,9 @@ std::ostream &operator<<(std::ostream &os, const Piece &p)
 			break;
 		case SHIELD:
 			out = 'S';
+			break;
+		case EMPTY:
+			out = 'E';
 			break;
 	}
 

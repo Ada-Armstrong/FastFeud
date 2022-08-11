@@ -23,6 +23,7 @@ const std::string index2rank_file[] = {
 std::vector<int_fast8_t> get_input()
 {
 	std::string pos;
+	static std::string skip{"skip"};
 
 	std::vector<int_fast8_t> out;
 	int_fast8_t loc;
@@ -34,11 +35,15 @@ std::vector<int_fast8_t> get_input()
 	std::stringstream ss(pos);
 
 	while (ss >> pos) {
-		if (pos.length() != 2 || !('a' <= pos[0] && pos[0] <= 'd' || 'A' <= pos[0] && pos[0] <= 'D')
-				|| !('1' <= pos[1] && pos[1] <= '4')) {
-			throw std::invalid_argument("Input formated incorrectly");
+		if (pos == skip) {
+			loc = -1;
+		} else {
+			if (pos.length() != 2 || !('a' <= pos[0] && pos[0] <= 'd' || 'A' <= pos[0] && pos[0] <= 'D')
+					|| !('1' <= pos[1] && pos[1] <= '4')) {
+				throw std::invalid_argument("Input formated incorrectly");
+			}
+			loc = BOARD_WIDTH * (pos[1] - '1') + (tolower(pos[0]) - 'a');
 		}
-		loc = BOARD_WIDTH * (pos[1] - '1') + (tolower(pos[0]) - 'a');
 		out.push_back(loc);
 	}
 
@@ -82,14 +87,18 @@ void display_moves(Board &b)
 		auto actions = b.generate_actions();
 		std::cout << "Actions:";
 		for (auto &action : actions) {
-			std::cout <<" (" << index2rank_file[action.pos] << ", [";
-			for (int i = 0; i < action.num_trgts; ++i) {
-				std::cout << index2rank_file[action.trgts[i]];
-				if (i != action.num_trgts - 1) {
-					std::cout << ", ";
+			if (action.pos < 0) {
+				std::cout << " (SKIP)";
+			} else {
+				std::cout <<" (" << index2rank_file[action.pos] << ", [";
+				for (int i = 0; i < action.num_trgts; ++i) {
+					std::cout << index2rank_file[action.trgts[i]];
+					if (i != action.num_trgts - 1) {
+						std::cout << ", ";
+					}
 				}
+				std::cout << "])";
 			}
-			std::cout << "])";
 		}
 	}
 	std::cout << std::endl;
@@ -148,7 +157,8 @@ int main(int argc, char *argv[])
 	
 	while (1) {
 		Team turn = b.to_play;
-		std::cout << "Turn: " << turn << "\tState: " << b.state << "\tTurn Count: " << b.turn_count / 4 + 1 << std::endl;
+		std::cout << "Turn: " << turn << "\tState: " << b.state << "\tSkips Black: " << b.get_passes(BLACK)
+			<< "\tSkips White: " << b.get_passes(WHITE) << "\tTurn Count: " << b.turn_count / 4 + 1 << std::endl;
 		pretty_print_board(b);
 
 		display_moves(b);
@@ -175,7 +185,7 @@ int main(int argc, char *argv[])
 
 			b.apply_swap(locations[0], locations[1]);
 		} else {
-			if (locations.size() < 2) {
+			if (locations.size() < 2 && (locations.size() != 1 || locations[0] >= 0)) {
 				std::cout << FF_ERROR_STRING("Need at least two positions for action, recieved "
 						<< locations.size() << " positions...\n") << std::endl;
 				continue;
