@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 3.10)
-
+cmake_minimum_required(VERSION 3.14)
 project(FastFeud)
 
-add_executable(FastFeud main.cpp board.cpp ab_node.cpp alphabeta.cpp)
+set(CMAKE_CXX_STANDARD 17)
+
+enable_testing()
+
+add_subdirectory(src)
+add_subdirectory(tests)

@@ -233,6 +233,7 @@ bool Board::load_file(std::string &filename)
 	std::ifstream f(filename);
 	if (!std::getline(f >> std::ws, line, ';')) {
 		std::cerr << "FAILED TO READ FILE " << filename << std::endl;
+		return false;
 	}
 	
 	if (line.size() < 3) {
