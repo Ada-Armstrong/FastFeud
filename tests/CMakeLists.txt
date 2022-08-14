@@ -22,4 +22,8 @@ target_link_libraries(
 )
 
 include(GoogleTest)
-gtest_discover_tests(board_test)
+gtest_discover_tests(
+  board_test
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+#set_tests_properties(board_test PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

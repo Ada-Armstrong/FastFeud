@@ -1,4 +1,4 @@
-sb0;
+sb0;0;0;
 ba3;bk4;bm3;ba3;
 bn3;bs3;bw3;bn3;
 wn3;ws4;ww3;wn3;

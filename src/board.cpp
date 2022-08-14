@@ -260,6 +260,17 @@ bool Board::load_file(std::string &filename)
 	if (this->turn_count < 0) {
 		return false;
 	}
+	// set number of passes for black and then white
+	for (int t = 0; t != NUM_TEAMS; ++t) {
+		if (!std::getline(f >> std::ws, line, ';')) {
+			std::cerr << "REACHED EOF " << filename << std::endl;
+			return false;
+		}
+		this->passes[t] = std::stoi(line);
+		if (this->passes[t] < 0 || this->passes[t] > 2) {
+			return false;
+		}
+	}
 	// set board pieces
 	int_fast8_t i;
 	for (i = 0; getline(f >> std::ws, line, ';'); ++i) {
