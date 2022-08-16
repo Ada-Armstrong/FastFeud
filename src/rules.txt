@@ -1,0 +1,61 @@
+OVERVIEW
+	Feud is a 2 player turn based board game where your objective is to defeat your opponents army.
+	There are two teams Black and White battling it out to be victorious. Each team starts with 8 pieces,
+	consisting of 6 different types of pieces which are; archers, knights, kings, medics, wizards, and shields.
+
+THE BOARD
+	The board consists of a 4x4 grid where each tile is either occupied by a piece or is empty. Each tile has
+	a label depedning on the column and row it occupies (columns are from A-D and rows from 1-4). An occupied
+	tile lists the piece's team (BLACK or WHITE), the piece's type, current hit points, and maximum hit points.
+	Empty tiles are represented by dots (..... . . .). A tile is adjacent to another tile if it is exactly one
+	tile up, down, left, or right from it. A piece is called active if one of it's adjacent tiles is on the 
+	same team as it. An inactive piece is called isolated. When a piece's hit points reaches zero that tile
+	becomes an empty tile.
+
+	  |      A      |      B      |      C      |      D      |
+	--|-------------|-------------|-------------|-------------|
+	1 | BLACK A 2 3 | BLACK K 3 4 | BLACK M 2 3 | BLACK A 2 3 |
+	--|-------------|-------------|-------------|-------------|
+	2 | BLACK N 3 3 | ..... . . . | ..... . . . | WHITE N 3 3 |
+	--|-------------|-------------|-------------|-------------|
+	3 | WHITE N 1 3 | WHITE S 4 4 | ..... . . . | BLACK N 2 3 |
+	--|-------------|-------------|-------------|-------------|
+	4 | ..... . . . | WHITE M 4 4 | WHITE K 3 3 | WHITE A 1 3 |
+	--|-------------|-------------|-------------|-------------|
+
+PLAYING
+	Each player's turn consists of two phases. First is the swap phase where a player must pick one of their
+	active pieces and swap it with an adjacent piece (note you cannot swap with an empty tile however you can
+	swap with an enemy piece).
+	
+	For example: BLACK has the following swaps avaliable in the above board:
+			(A1 B1) (A1 A2) (A2 A3) (B1 C1) (C1 D1) (D1 D2)
+	Note: The swap is entered by providing the two coordinates of the tiles to swap as follows; A1 A2
+	Moreover, the order of the two coordinates do not matter so A1 A2 is equivalent to A2 A1.
+
+	After swapping it is the player's action phase. During the action phase the player picks one of their
+	active pieces and targets to perform actions on or skips their action phase. Each type of piece can 
+	perform a different kind of action on one or more targets, each of the actions are listed in the next 
+	section. In general actions damage enemy pieces or heal your pieces. Note a player that skips their
+	action phase 3 turns in a row surrenders the game.
+
+	Note: An action is entered by providing the tile of the piece to perform the action followed by the tile(s)
+	of the target(s).
+
+	For example in the above board state: C1 B1 D1
+		would perform a medic action on the Black king at B1 and Black archer at D1
+
+	A player wins the game if the enemy king reaches 0 hit points, all of the enemy pieces are isolated, or the
+	enemy skips 3 action phases in a row.
+
+	Note: A draw can occur if and only if a swap that isolates both teams at the same time is played.
+
+PIECE ABILITIES
+	The following lists what the action of each different type of piece is:
+	- Archer (A): target 1 enemy piece on the same row or column and deal 1 damage to it.
+	- Knight (N): target up to 2 enemy pieces that are adjacent and deal 1 damage to each of them.
+	- King   (K): target 1 enempy piece that is adjacent and deal 1 damage to it.
+	- Medic  (M): target up to 4 friendly adjacent pieces that are damaged and heal them for 1 point.
+	- Wizard (W): target any other friendly piece on the board and swap tiles with it.
+	- Shield (S): cannot perform an action however the enemy cannot swap places with it and enemy archers
+		      cannot target pieces behind the shield.

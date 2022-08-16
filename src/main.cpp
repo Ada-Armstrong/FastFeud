@@ -20,10 +20,54 @@ const std::string index2rank_file[] = {
 	"A4", "B4", "C4", "D4"
 };
 
+int main_menu(Board &b)
+{
+	std::cout << "-------------------------------\n"
+		<< "<<<< " << FF_SUCCESS_STRING("Welcome to Fast Feud!") << " >>>>\n" 
+		<< "-------------------------------\n\n"
+		<< "Commands: help, rules, start, quit" << std::endl;
+
+	std::string cmd;
+
+	while (1) {
+		std::cout << ">> ";
+		std::cout.flush();
+
+		std::getline(std::cin, cmd);
+		std::stringstream ss(cmd);
+
+		while (ss >> cmd) {
+			if (cmd == "help") {
+				std::cout << "<< " FF_ACTIVE_STRING("Help Screen") << " >>\n"
+					<< "help - prints out this message.\n"
+					<< "rules - provides a summary of the game rules.\n"
+					<< "start - begin playing the game.\n"
+					<< "quit - exit the program." << std::endl;
+			} else if (cmd == "rules") {
+				std::ifstream rules_file{"rules.txt"};
+				if (rules_file.is_open()) {
+					std::cout << "<< " FF_ACTIVE_STRING("Rules Screen") " >>\n" << rules_file.rdbuf();
+				} else {
+					std::cout << FF_ERROR_STRING("Couldn't find the rules file...") << std::endl;
+				}
+			} else if (cmd == "start") {
+				std::cout << "Starting new game...\n" << std::endl;
+				return 0;
+			} else if (cmd == "quit") {
+				std::cout << "Quiting...\n" << std::endl;
+				return 1;
+			} else {
+				std::cout << "Unknown command..." << std::endl;
+			}
+		}
+	}
+	return 0;
+}
+
 std::vector<int_fast8_t> get_input()
 {
 	std::string pos;
-	static std::string skip{"skip"};
+	static const std::string skip{"skip"};
 
 	std::vector<int_fast8_t> out;
 	int_fast8_t loc;
@@ -143,10 +187,9 @@ bool is_action_valid(action a, std::vector<action> valid_actions) {
 	return false;
 }
 
-int main(int argc, char *argv[])
+void play(Board &b, int argc, char *argv[])
 {
-	Board b;
-	int search_depth = 8;
+	int search_depth = 6;
 	std::string filename("../positions/default1.txt");
 	if (argc == 2) {
 		filename = argv[1];
@@ -215,6 +258,19 @@ int main(int argc, char *argv[])
 			pretty_print_board(b);
 			break;
 		}
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	Board b;
+
+	while (1) {
+		if (main_menu(b)) {
+			return 0;
+		}
+
+		play(b, argc, argv);
 	}
 
 	return 0;
