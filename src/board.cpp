@@ -348,6 +348,13 @@ void Board::swap(int_fast8_t pos1, int_fast8_t pos2)
 		this->pieces[t2][p2] &= ~bitmap_pos2;
 		this->pieces[t2][p2] |= bitmap_pos1;
 	}
+	// swap damaged flags
+	const int_fast16_t d1 = this->damaged >> pos1;
+	const int_fast16_t d2 = this->damaged >> pos2;
+	this->damaged &= ~bitmap_pos1;
+	this->damaged &= ~bitmap_pos2;
+	this->damaged |= d1 << pos2;
+	this->damaged |= d2 << pos1;
 
 	std::swap(this->info[pos1], this->info[pos2]);
 

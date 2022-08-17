@@ -5,7 +5,7 @@ OVERVIEW
 
 THE BOARD
 	The board consists of a 4x4 grid where each tile is either occupied by a piece or is empty. Each tile has
-	a label depedning on the column and row it occupies (columns are from A-D and rows from 1-4). An occupied
+	a label depending on the column and row it occupies (columns are from A-D and rows from 1-4). An occupied
 	tile lists the piece's team (BLACK or WHITE), the piece's type, current hit points, and maximum hit points.
 	Empty tiles are represented by dots (..... . . .). A tile is adjacent to another tile if it is exactly one
 	tile up, down, left, or right from it. A piece is called active if one of it's adjacent tiles is on the 

@@ -22,9 +22,9 @@ const std::string index2rank_file[] = {
 
 int main_menu(Board &b)
 {
-	std::cout << "-------------------------------\n"
+	std::cout << FF_ACTIVE_STRING("-------------------------------\n")
 		<< "<<<< " << FF_SUCCESS_STRING("Welcome to Fast Feud!") << " >>>>\n" 
-		<< "-------------------------------\n\n"
+		<< FF_ACTIVE_STRING("-------------------------------\n\n")
 		<< "Commands: help, rules, start, quit" << std::endl;
 
 	std::string cmd;
@@ -39,12 +39,12 @@ int main_menu(Board &b)
 		while (ss >> cmd) {
 			if (cmd == "help") {
 				std::cout << "<< " FF_ACTIVE_STRING("Help Screen") << " >>\n"
-					<< "help - prints out this message.\n"
-					<< "rules - provides a summary of the game rules.\n"
-					<< "start - begin playing the game.\n"
-					<< "quit - exit the program." << std::endl;
+					<< "\thelp  - Prints out this message.\n"
+					<< "\trules - Provides a summary of the game rules.\n"
+					<< "\tstart - Begin playing the game.\n"
+					<< "\tquit  - Exit the program." << std::endl;
 			} else if (cmd == "rules") {
-				std::ifstream rules_file{"rules.txt"};
+				std::ifstream rules_file{"config/rules.txt"};
 				if (rules_file.is_open()) {
 					std::cout << "<< " FF_ACTIVE_STRING("Rules Screen") " >>\n" << rules_file.rdbuf();
 				} else {
@@ -76,13 +76,14 @@ std::vector<int_fast8_t> get_input()
 	std::cout.flush();
 
 	std::getline(std::cin, pos);
+	std::transform(pos.begin(), pos.end(), pos.begin(), ::tolower);
 	std::stringstream ss(pos);
 
 	while (ss >> pos) {
 		if (pos == skip) {
 			loc = -1;
 		} else {
-			if (pos.length() != 2 || !('a' <= pos[0] && pos[0] <= 'd' || 'A' <= pos[0] && pos[0] <= 'D')
+			if (pos.length() != 2 || !('a' <= pos[0] && pos[0] <= 'd')
 					|| !('1' <= pos[1] && pos[1] <= '4')) {
 				throw std::invalid_argument("Input formated incorrectly");
 			}
@@ -99,58 +100,78 @@ void pretty_print_board(Board &b)
 	auto tiles = b.tile_info();
 	int i = 0;
 
+	std::cout << "  |      A      |      B      |      C      |      D      |\n"
+		<< "--|-------------|-------------|-------------|-------------|\n";
 	for (auto &stats : tiles) {
+		if (i % BOARD_WIDTH == 0) {
+			std::cout << i / BOARD_WIDTH + 1 << " ";
+		}
 		if (stats.hp > 0) {
 			if (stats.active) {
 				std::cout << "| " << FF_ACTIVE_STRING(stats.team << " " << stats.type << " "
-						<< (int)stats.hp << " " << (int)stats.max_hp);
+						<< (int)stats.hp << " " << (int)stats.max_hp) << " ";
 			} else {
 				std::cout << "| " << FF_INACTIVE_STRING(stats.team << " " << stats.type << " "
-						<< (int)stats.hp << " " << (int)stats.max_hp);
+						<< (int)stats.hp << " " << (int)stats.max_hp) << " ";
 			}
 		} else {
-			std::cout << "|" << FF_INACTIVE_STRING(" ..... . . .");
+			std::cout << "|" << FF_INACTIVE_STRING(" ..... . . . ");
 		}
 		if (i++ % BOARD_WIDTH == BOARD_WIDTH - 1) {
-			std::cout << "|\n";
+			std::cout << "|\n"
+				<< "--|-------------|-------------|-------------|-------------|\n";
 		}
 	}
 
 
 }
 
-void display_moves(Board &b)
+void pretty_print_action(action &action)
 {
+	if (action.pos < 0) {
+		std::cout << " (SKIP)";
+	} else {
+		std::cout <<" (" << index2rank_file[action.pos] << ", [";
+		for (int i = 0; i < action.num_trgts; ++i) {
+			std::cout << index2rank_file[action.trgts[i]];
+			if (i != action.num_trgts - 1) {
+				std::cout << ", ";
+			}
+		}
+		std::cout << "])";
+	}
+}
+
+void display_moves(Board &b, int depth)
+{
+	int index = -1;
+	if (depth) {
+		index = suggest_move(b, depth);
+	}
+
 	if (b.state == SWAP) {
 		auto swaps = b.generate_swaps();
 		std::cout << "Swaps:";
 		for (auto &swap : swaps) {
 			std::cout << " (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
 		}
+		if (depth) {
+			auto &swap = swaps[index];
+			std::cout << "\nSuggested Move: (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
+		}
 	} else {
 		auto actions = b.generate_actions();
 		std::cout << "Actions:";
 		for (auto &action : actions) {
-			if (action.pos < 0) {
-				std::cout << " (SKIP)";
-			} else {
-				std::cout <<" (" << index2rank_file[action.pos] << ", [";
-				for (int i = 0; i < action.num_trgts; ++i) {
-					std::cout << index2rank_file[action.trgts[i]];
-					if (i != action.num_trgts - 1) {
-						std::cout << ", ";
-					}
-				}
-				std::cout << "])";
-			}
+			pretty_print_action(action);
+		}
+		if (depth) {
+			auto &action = actions[index];
+			std::cout << "\nSuggested Move: ";
+			pretty_print_action(action);
 		}
 	}
 	std::cout << std::endl;
-}
-
-void computer_move_suggestion(Board &b, int depth)
-{
-	std::cout << "Suggested Move Index: " << suggest_move(b, depth) << std::endl;
 }
 
 bool is_swap_valid(std::vector<int_fast8_t> swap, std::vector<std::pair<int_fast8_t, int_fast8_t>> valid_swaps)
@@ -190,7 +211,7 @@ bool is_action_valid(action a, std::vector<action> valid_actions) {
 void play(Board &b, int argc, char *argv[])
 {
 	int search_depth = 6;
-	std::string filename("../positions/default1.txt");
+	std::string filename("config/positions/default1.txt");
 	if (argc == 2) {
 		filename = argv[1];
 	}
@@ -204,8 +225,7 @@ void play(Board &b, int argc, char *argv[])
 			<< "\tSkips White: " << b.get_passes(WHITE) << "\tTurn Count: " << b.turn_count / 4 + 1 << std::endl;
 		pretty_print_board(b);
 
-		display_moves(b);
-		computer_move_suggestion(b, search_depth);
+		display_moves(b, search_depth);
 
 		std::vector<int_fast8_t> locations;
 		try {

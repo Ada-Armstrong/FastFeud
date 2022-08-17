@@ -77,3 +77,36 @@ TEST(BoardLoadingTests, Exists)
 		EXPECT_EQ(p.type, EMPTY);
 	}
 }
+
+TEST(BoardBug, MedicOverheal)
+{
+	// make sure that the medic cannot heal pieces that are at full hp
+	// bug was due to the damaged bit board not being properly updated
+	Board b;
+
+	std::string file_name = "test_positions/medic_bug.txt"; 
+	ASSERT_EQ(b.load_file(file_name), true);
+
+	ASSERT_EQ(b.state, ACTION);
+	ASSERT_EQ(b.to_play, BLACK);
+
+	action a;
+	a.pos = 1;
+	a.num_trgts = 1;
+	a.trgts[0] = 13;
+	
+	b.apply_action(a);
+
+	ASSERT_EQ(b.state, SWAP);
+	ASSERT_EQ(b.to_play, WHITE);
+
+	b.apply_swap(12, 13);
+
+	ASSERT_EQ(b.state, ACTION);
+	ASSERT_EQ(b.to_play, WHITE);
+
+	auto actions = b.generate_actions();
+
+	// No actions besides skipping should be avaliable
+	ASSERT_EQ(actions.size(), 1);
+}
