@@ -392,7 +392,7 @@ void play(Board &b, Config &config)
 int main(int argc, char *argv[])
 {
 	Board b;
-	Config config{{HUMAN, HUMAN}, "config/positions/archer_bug.txt", 0, 6};
+	Config config{{HUMAN, COMPUTER}, "config/positions/default1.txt", 0, 6};
 
 	while (1) {
 		if (main_menu(config)) {
