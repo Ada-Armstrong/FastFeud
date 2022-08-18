@@ -12,7 +12,6 @@
 #define FF_ACTIVE_STRING(msg) "\033[33m" << msg << "\033[0m"
 #define FF_INACTIVE_STRING(msg) "\033[34m" << msg << "\033[0m"
 
-
 const std::string index2rank_file[] = {
 	"A1", "B1", "C1", "D1",
 	"A2", "B2", "C2", "D2",
@@ -20,12 +19,33 @@ const std::string index2rank_file[] = {
 	"A4", "B4", "C4", "D4"
 };
 
-int main_menu(Board &b)
+enum Player {
+	HUMAN,
+	COMPUTER
+};
+
+struct Config {
+	Player players[2];
+	std::string filename;
+	int hint_depth;
+	int search_depth;
+};
+
+union MoveChoice {
+	struct {
+		uint_fast8_t first;
+		uint_fast8_t second;
+	} swap;
+	action act;
+};
+
+
+int main_menu(Config &config)
 {
-	std::cout << FF_ACTIVE_STRING("-------------------------------\n")
-		<< "<<<< " << FF_SUCCESS_STRING("Welcome to Fast Feud!") << " >>>>\n" 
-		<< FF_ACTIVE_STRING("-------------------------------\n\n")
-		<< "Commands: help, rules, start, quit" << std::endl;
+	std::cout << FF_ACTIVE_STRING("---------------------------------------\n")
+		<< "<<<<<<<< " << FF_SUCCESS_STRING("Welcome to Fast Feud!") << " >>>>>>>>\n" 
+		<< FF_ACTIVE_STRING("---------------------------------------\n\n")
+		<< "Commands: help, rules, setup, start, quit" << std::endl;
 
 	std::string cmd;
 
@@ -34,15 +54,17 @@ int main_menu(Board &b)
 		std::cout.flush();
 
 		std::getline(std::cin, cmd);
+		std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 		std::stringstream ss(cmd);
 
 		while (ss >> cmd) {
 			if (cmd == "help") {
 				std::cout << "<< " FF_ACTIVE_STRING("Help Screen") << " >>\n"
-					<< "\thelp  - Prints out this message.\n"
-					<< "\trules - Provides a summary of the game rules.\n"
-					<< "\tstart - Begin playing the game.\n"
-					<< "\tquit  - Exit the program." << std::endl;
+					<< "\tHELP  - Prints out this message.\n"
+					<< "\tRULES - Provides a summary of the game rules.\n"
+					<< "\tSETUP - Configure game settings.\n"
+					<< "\tSTART - Begin playing the game.\n"
+					<< "\tQUIT  - Exits the program." << std::endl;
 			} else if (cmd == "rules") {
 				std::ifstream rules_file{"config/rules.txt"};
 				if (rules_file.is_open()) {
@@ -50,6 +72,8 @@ int main_menu(Board &b)
 				} else {
 					std::cout << FF_ERROR_STRING("Couldn't find the rules file...") << std::endl;
 				}
+			} else if (cmd == "setup") {
+				std::cout << "<< " FF_ACTIVE_STRING("Setup Screen") << " >>\n";
 			} else if (cmd == "start") {
 				std::cout << "Starting new game...\n" << std::endl;
 				return 0;
@@ -64,13 +88,13 @@ int main_menu(Board &b)
 	return 0;
 }
 
-std::vector<int_fast8_t> get_input()
+std::vector<uint_fast8_t> get_input()
 {
 	std::string pos;
 	static const std::string skip{"skip"};
 
-	std::vector<int_fast8_t> out;
-	int_fast8_t loc;
+	std::vector<uint_fast8_t> out;
+	uint_fast8_t loc;
 
 	std::cout << "Move: ";
 	std::cout.flush();
@@ -81,7 +105,7 @@ std::vector<int_fast8_t> get_input()
 
 	while (ss >> pos) {
 		if (pos == skip) {
-			loc = -1;
+			loc = BOARD_SIZE;
 		} else {
 			if (pos.length() != 2 || !('a' <= pos[0] && pos[0] <= 'd')
 					|| !('1' <= pos[1] && pos[1] <= '4')) {
@@ -122,13 +146,17 @@ void pretty_print_board(Board &b)
 				<< "--|-------------|-------------|-------------|-------------|\n";
 		}
 	}
+	std::cout << std::endl;
+}
 
-
+void pretty_print_swap(std::pair<uint_fast8_t, uint_fast8_t> &swap)
+{
+	std::cout << " (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
 }
 
 void pretty_print_action(action &action)
 {
-	if (action.pos < 0) {
+	if (action.pos == BOARD_SIZE) {
 		std::cout << " (SKIP)";
 	} else {
 		std::cout <<" (" << index2rank_file[action.pos] << ", [";
@@ -153,11 +181,12 @@ void display_moves(Board &b, int depth)
 		auto swaps = b.generate_swaps();
 		std::cout << "Swaps:";
 		for (auto &swap : swaps) {
-			std::cout << " (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
+			pretty_print_swap(swap);
 		}
 		if (depth) {
 			auto &swap = swaps[index];
-			std::cout << "\nSuggested Move: (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
+			std::cout << "\nSuggested Move: ";
+			pretty_print_swap(swap);
 		}
 	} else {
 		auto actions = b.generate_actions();
@@ -174,7 +203,7 @@ void display_moves(Board &b, int depth)
 	std::cout << std::endl;
 }
 
-bool is_swap_valid(std::vector<int_fast8_t> swap, std::vector<std::pair<int_fast8_t, int_fast8_t>> valid_swaps)
+bool is_swap_valid(std::vector<uint_fast8_t> swap, std::vector<std::pair<uint_fast8_t, uint_fast8_t>> valid_swaps)
 {
 	// order swap the way valid swaps are ordered (from least to greatest)
 	if (swap[0] > swap[1]) {
@@ -208,66 +237,99 @@ bool is_action_valid(action a, std::vector<action> valid_actions) {
 	return false;
 }
 
-void play(Board &b, int argc, char *argv[])
+int human_get_input(Board &b, MoveChoice &choice)
 {
-	int search_depth = 6;
-	std::string filename("config/positions/default1.txt");
-	if (argc == 2) {
-		filename = argv[1];
+	std::vector<uint_fast8_t> locations;
+
+	try {
+		locations = get_input();
+		std::cout << std::endl;
+	} catch (const std::invalid_argument &e) {
+		std::cout << FF_ERROR_STRING("Bad input recieved...\n") << std::endl;
+		return 1;
 	}
-	b.load_file(filename);
+
+	if (b.state == SWAP) {
+		if (locations.size() != 2) {
+			std::cout << FF_ERROR_STRING("Need two positions for swap, recieved "
+					<< locations.size() << " positions...\n") << std::endl;
+			return 1;
+		} else if (!is_swap_valid(locations, b.generate_swaps())) {
+			std::cout << FF_ERROR_STRING("Invalid swap provided, try again...\n") << std::endl;
+			return 1;
+		}
+
+		choice.swap.first = locations[0];
+		choice.swap.second = locations[1];
+
+	} else {
+		if (locations.size() < 2 && (locations.size() != 1 || locations[0] != BOARD_SIZE)) {
+			std::cout << FF_ERROR_STRING("Need at least two positions for action, recieved "
+					<< locations.size() << " positions...\n") << std::endl;
+			return 1;
+		} 
+
+		choice.act.pos = locations[0];
+		choice.act.num_trgts = locations.size() - 1;
+
+		for (int i = 1; i < locations.size(); ++i) {
+			choice.act.trgts[i - 1] = locations[i];
+		}
+		
+		if (!is_action_valid(choice.act, b.generate_actions())) {
+			std::cout << FF_ERROR_STRING("Invalid action provided, try again...\n") << std::endl;
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+void play(Board &b, Config &config)
+{
+	if (!b.load_file(config.filename)) {
+		return;
+	}
 	
 	std::pair<Team, Win_Condition> winner_info{NONE, NO_WINNER};
 	
 	while (1) {
 		Team turn = b.to_play;
-		std::cout << "Turn: " << turn << "\tState: " << b.state << "\tSkips Black: " << b.get_passes(BLACK)
-			<< "\tSkips White: " << b.get_passes(WHITE) << "\tTurn Count: " << b.turn_count / 4 + 1 << std::endl;
+		std::cout << "  Turn: " << FF_SUCCESS_STRING(turn) << "\tState: " << FF_SUCCESS_STRING(b.state)
+			<< "\tTurn Count: " << b.turn_count / 4 + 1 
+			<< "\n  Skips Black: " << b.get_passes(BLACK) << "\t\tSkips White: " << b.get_passes(WHITE) 
+			<< "\n" << std::endl;
+
 		pretty_print_board(b);
+		display_moves(b, config.hint_depth);
 
-		display_moves(b, search_depth);
+		MoveChoice choice;
 
-		std::vector<int_fast8_t> locations;
-		try {
-			locations = get_input();
+		if (config.players[turn] == HUMAN) {
+			if (human_get_input(b, choice)) {
+				continue;
+			}
+		} else {
+			// computer move
+			std::cout << "Move: ";
+			const int move_index = suggest_move(b, config.search_depth);
+			if (b.state == SWAP) {
+				auto swaps = b.generate_swaps();
+				choice.swap.first = swaps[move_index].first; 
+				choice.swap.second = swaps[move_index].second; 
+				pretty_print_swap(swaps[move_index]);
+			} else {
+				auto actions = b.generate_actions();
+				choice.act = actions[move_index];
+				pretty_print_action(choice.act);
+			}
 			std::cout << std::endl;
-		} catch (const std::invalid_argument &e) {
-			std::cout << FF_ERROR_STRING("Bad input recieved...\n") << std::endl;
-			continue;
 		}
 
 		if (b.state == SWAP) {
-			if (locations.size() != 2) {
-				std::cout << FF_ERROR_STRING("Need two positions for swap, recieved "
-						<< locations.size() << " positions...\n") << std::endl;
-				continue;
-			} else if (!is_swap_valid(locations, b.generate_swaps())) {
-				std::cout << FF_ERROR_STRING("Invalid swap provided, try again...\n") << std::endl;
-				continue;
-			}
-
-			b.apply_swap(locations[0], locations[1]);
+			b.apply_swap(choice.swap.first, choice.swap.second);
 		} else {
-			if (locations.size() < 2 && (locations.size() != 1 || locations[0] >= 0)) {
-				std::cout << FF_ERROR_STRING("Need at least two positions for action, recieved "
-						<< locations.size() << " positions...\n") << std::endl;
-				continue;
-			} 
-
-			action a;
-			a.pos = locations[0];
-			a.num_trgts = locations.size() - 1;
-
-			for (int i = 1; i < locations.size(); ++i) {
-				a.trgts[i-1] = locations[i];
-			}
-			
-			if (!is_action_valid(a, b.generate_actions())) {
-				std::cout << FF_ERROR_STRING("Invalid action provided, try again...\n") << std::endl;
-				continue;
-			}
-
-			b.apply_action(a);
+			b.apply_action(choice.act);
 		}
 
 		winner_info = b.winner();
@@ -284,13 +346,14 @@ void play(Board &b, int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	Board b;
+	Config config{{HUMAN, COMPUTER}, "config/positions/default1.txt", 0, 6};
 
 	while (1) {
-		if (main_menu(b)) {
+		if (main_menu(config)) {
 			return 0;
 		}
 
-		play(b, argc, argv);
+		play(b, config);
 	}
 
 	return 0;

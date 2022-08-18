@@ -43,29 +43,29 @@ enum Win_Condition {
 
 // EMPTY tiles are represented by a struct that has hp <= 0
 struct piece_stats {
-	int_fast8_t hp;
-	int_fast8_t max_hp;
+	uint_fast8_t hp;
+	uint_fast8_t max_hp;
 	Team team;
 	Piece type;
 	bool active;
 };
 
 struct action {
-	int_fast8_t pos; // location of action doer
-	int_fast8_t num_trgts; // 1-4
-	int_fast8_t trgts[4];
+	uint_fast8_t pos; // location of action doer
+	uint_fast8_t num_trgts; // 1-4
+	uint_fast8_t trgts[4];
 };
 
 class LookupTables {
 	public:
 	// bitmap for each position representing neighbours of that tile
-	int_fast16_t neighbours[BOARD_SIZE];
+	uint_fast16_t neighbours[BOARD_SIZE];
 	// archer attack lookup table, first index archer pos 0-15, second
 	// index the pos of enemy shield 0-15, 16 if no shield
-	int_fast16_t archer_attacks[BOARD_SIZE][BOARD_SIZE+1];
+	uint_fast16_t archer_attacks[BOARD_SIZE][BOARD_SIZE+1];
 	// stores index of k element subsets of an array of length n,
 	// first index for array len, second for k element subset
-	std::vector<std::vector<int_fast8_t>> n_k_subset[4][4];
+	std::vector<std::vector<uint_fast8_t>> n_k_subset[4][4];
 
 	private:
 	/* Description: Populates the neighbours table. Should be called once.
@@ -111,22 +111,22 @@ class Board {
 
 	static LookupTables lookup;
 
-	int_fast16_t pieces[NUM_TEAMS][NUM_PIECES];
+	uint_fast16_t pieces[NUM_TEAMS][NUM_PIECES];
 
 	piece_stats info[BOARD_SIZE];
 
-	int_fast16_t active[NUM_TEAMS];
-	int_fast8_t passes[NUM_TEAMS];
+	uint_fast16_t active[NUM_TEAMS];
+	uint_fast8_t passes[NUM_TEAMS];
 
 	// stores a bitmap for each team representing where the pieces are
-	int_fast16_t team_bitmaps[NUM_TEAMS];
+	uint_fast16_t team_bitmaps[NUM_TEAMS];
 	// tracks pieces that don't have full hp and that are alive
-	int_fast16_t damaged;
+	uint_fast16_t damaged;
 
 	/* Description: returns true if pos is within the board.
 	 * Args: pos - the position to check.
 	 */
-	bool inbound(int_fast8_t pos);
+	bool inbound(uint_fast8_t pos);
 	/* Description: populates the team_bitmaps bitmap according to the pieces array.
 	 * Args: None
 	 */
@@ -137,14 +137,14 @@ class Board {
 	 * 	 seen - boolean array used to track duplicate swaps (i.e. [A1, A2] == [A2, A1])
 	 */
 	void generate_swaps_at(
-			int_fast8_t pos,
-			std::vector<std::pair<int_fast8_t, int_fast8_t>> &swaps,
+			uint_fast8_t pos,
+			std::vector<std::pair<uint_fast8_t, uint_fast8_t>> &swaps,
 			int seen[BOARD_SIZE][BOARD_SIZE]);
 	/* Description: generates the valid actions at pos and adds them to the actions vector.
 	 * Args: pos - the position to generate the actions for.
 	 * 	 actions - the vector to append the results to.
 	 */
-	void generate_actions_at(int_fast8_t pos, std::vector<action> &actions);
+	void generate_actions_at(uint_fast8_t pos, std::vector<action> &actions);
 
 	public:
 
@@ -160,7 +160,7 @@ class Board {
 	/* Description: Updates the active flags of the piece at pos.
 	 * Args: pos - the position to update.
 	 */
-	void update_activity(int_fast8_t pos);
+	void update_activity(uint_fast8_t pos);
 	/* Description: Updates all of the active flags of all pieces.
 	 * Args: None
 	 */
@@ -172,17 +172,17 @@ class Board {
 	 * 	 max_hp - the maximum hp of the piece.
 	 * 	 pos - the position to place the piece.
 	 */
-	void place_piece(Piece type, Team colour, int_fast8_t hp, int_fast8_t max_hp, int_fast8_t pos);
+	void place_piece(Piece type, Team colour, uint_fast8_t hp, uint_fast8_t max_hp, uint_fast8_t pos);
 	/* Description: swaps the pieces at pos1 and pos2.
 	 * Args: pos1 - position of first piece.
 	 * 	 pos2 - position of second piece.
 	 */
-	void swap(int_fast8_t pos1, int_fast8_t pos2);
+	void swap(uint_fast8_t pos1, uint_fast8_t pos2);
 	/* Description: performs a swap and updates the turn_count and state.
 	 * Args: pos1 - position of first piece.
 	 * 	 pos2 - position of second piece.
 	 */
-	void apply_swap(int_fast8_t pos1, int_fast8_t pos2);
+	void apply_swap(uint_fast8_t pos1, uint_fast8_t pos2);
 	/* Description: performs the action and updates the turn_count and state.
 	 * Args: a - the action to be performed.
 	 */
@@ -190,7 +190,7 @@ class Board {
 	/* Description: returns a vector of valid swaps for this board state. 
 	 * Args: None
 	 */
-	std::vector<std::pair<int_fast8_t, int_fast8_t>> generate_swaps();
+	std::vector<std::pair<uint_fast8_t, uint_fast8_t>> generate_swaps();
 	/* Description: returns a vector of valid actions for this board state.
 	 * Args: None
 	 */
