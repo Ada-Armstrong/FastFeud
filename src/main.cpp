@@ -40,6 +40,50 @@ union MoveChoice {
 };
 
 
+int setup_menu(Config &config)
+{
+	std::string cmd;
+	Config copy{config};
+
+	std::cout << "<< " FF_ACTIVE_STRING("Setup Screen") << " >>\n";
+	std::cout << "Enter the game configuration as follows:\n" 
+		<< "\t player1\t\tplayer2\t\t\thint depth\tsearch depth\n"
+		<< "\t(human or computer)\t(human or computer)\t[0-9]\t\t[0-9]" << std::endl;
+	std:: cout << ">>> ";
+	std::cout.flush();
+
+	std::getline(std::cin, cmd);
+	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+	std::stringstream ss(cmd);
+
+	for (int i = 0; i < NUM_TEAMS; ++i) {
+		if (!(ss >> cmd)) {
+			return 1;
+		}
+		if (cmd == "human") {
+			copy.players[i] = HUMAN;
+		} else if (cmd == "computer") {
+			copy.players[i] = COMPUTER;
+		} else {
+			return 1;
+		}
+	}
+
+	if (!(ss >> cmd)) {
+		return 1;
+	}
+	copy.hint_depth = std::stoi(cmd);
+
+	if (!(ss >> cmd)) {
+		return 1;
+	}
+	copy.search_depth = std::stoi(cmd);
+
+	config = copy;
+	std::cout << "Writing new configuration..." << std::endl;
+	return 0;
+}
+
 int main_menu(Config &config)
 {
 	std::cout << FF_ACTIVE_STRING("---------------------------------------\n")
@@ -73,7 +117,9 @@ int main_menu(Config &config)
 					std::cout << FF_ERROR_STRING("Couldn't find the rules file...") << std::endl;
 				}
 			} else if (cmd == "setup") {
-				std::cout << "<< " FF_ACTIVE_STRING("Setup Screen") << " >>\n";
+				if (setup_menu(config)) {
+					std::cout << FF_ERROR_STRING("Bad commands provided, setup not updated...") << std::endl;
+				}
 			} else if (cmd == "start") {
 				std::cout << "Starting new game...\n" << std::endl;
 				return 0;
@@ -323,7 +369,7 @@ void play(Board &b, Config &config)
 				choice.act = actions[move_index];
 				pretty_print_action(choice.act);
 			}
-			std::cout << std::endl;
+			std::cout << "\n" << std::endl;
 		}
 
 		if (b.state == SWAP) {
@@ -346,7 +392,7 @@ void play(Board &b, Config &config)
 int main(int argc, char *argv[])
 {
 	Board b;
-	Config config{{HUMAN, COMPUTER}, "config/positions/default1.txt", 0, 6};
+	Config config{{HUMAN, HUMAN}, "config/positions/archer_bug.txt", 0, 6};
 
 	while (1) {
 		if (main_menu(config)) {

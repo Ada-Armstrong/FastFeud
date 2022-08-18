@@ -38,6 +38,8 @@ void LookupTables::compute_neighbours()
 	}
 }
 
+#include <bitset>
+
 void LookupTables::compute_archer_attacks()
 {
 	uint_fast16_t bb;
@@ -71,6 +73,8 @@ void LookupTables::compute_archer_attacks()
 			this->archer_attacks[pos][shield_pos] = bb;
 		}
 	}
+	std::bitset<16> bug(this->archer_attacks[1][BOARD_SIZE]);
+	std::cout << bug << std::endl;
 }
 
 static void comb(std::vector<std::vector<uint_fast8_t>> &res, std::vector<uint_fast8_t> data, int n, int k, int index, int i)
@@ -511,7 +515,7 @@ void Board::generate_actions_at(uint_fast8_t pos, std::vector<action> &actions)
 	Team t = this->info[pos].team;
 	Team other_team = static_cast<Team>(1 - this->info[pos].team);
 
-	uint_fast8_t opp_shield;
+	int_fast8_t opp_shield;
 	uint_fast16_t trgts;
 	int k; // max number of targets
 

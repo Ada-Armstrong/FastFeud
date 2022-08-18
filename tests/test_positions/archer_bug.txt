@@ -1,0 +1,5 @@
+ab65;0;0;
+.;ba3;bk3;bn2;
+wn2;.;bm1;bw3;
+ww3;ws1;.;wn3;
+.;wk1;wa3;wa2;
