@@ -38,8 +38,6 @@ void LookupTables::compute_neighbours()
 	}
 }
 
-#include <bitset>
-
 void LookupTables::compute_archer_attacks()
 {
 	uint_fast16_t bb;
@@ -73,8 +71,6 @@ void LookupTables::compute_archer_attacks()
 			this->archer_attacks[pos][shield_pos] = bb;
 		}
 	}
-	std::bitset<16> bug(this->archer_attacks[1][BOARD_SIZE]);
-	std::cout << bug << std::endl;
 }
 
 static void comb(std::vector<std::vector<uint_fast8_t>> &res, std::vector<uint_fast8_t> data, int n, int k, int index, int i)
@@ -308,6 +304,19 @@ int Board::get_passes(Team t)
 	return this->passes[t];
 }
 
+int Board::num_friendly_neighbours(uint_fast8_t pos)
+{
+	assert(inbound(pos));
+	const Team t = this->info[pos].team;
+	uint_fast16_t f = this->team_bitmaps[t] & this->lookup.neighbours[pos];
+	int count = 0;
+	while (f) {
+		f = f & (f - 1);
+		++count;
+	}
+	return count;
+}
+
 void Board::place_piece(Piece type, Team colour, uint_fast8_t hp, uint_fast8_t max_hp, uint_fast8_t pos)
 {
 	assert(type != NUM_PIECES);
@@ -351,6 +360,9 @@ void Board::swap(uint_fast8_t pos1, uint_fast8_t pos2)
 		// unset bit at pos2 and set bit at pos1
 		this->pieces[t2][p2] &= ~bitmap_pos2;
 		this->pieces[t2][p2] |= bitmap_pos1;
+		// unset activity
+		this->active[t1] &= ~bitmap_pos1;
+		this->active[t2] &= ~bitmap_pos2;
 	}
 	// swap damaged flags
 	const uint_fast16_t d1 = (this->damaged >> pos1) & 1;

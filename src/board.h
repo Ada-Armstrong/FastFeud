@@ -157,6 +157,10 @@ class Board {
 	 * Args: t - the team to check.
 	 */
 	int get_passes(Team t);
+	/* Description: Returns the number of friendlies that are neighbours at pos.
+	 * Args: pos - the position to check.
+	 */
+	int num_friendly_neighbours(uint_fast8_t pos);
 	/* Description: Updates the active flags of the piece at pos.
 	 * Args: pos - the position to update.
 	 */

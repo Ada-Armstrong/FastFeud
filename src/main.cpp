@@ -27,6 +27,7 @@ enum Player {
 struct Config {
 	Player players[2];
 	std::string filename;
+	std::string logfile;
 	int hint_depth;
 	int search_depth;
 };
@@ -195,25 +196,29 @@ void pretty_print_board(Board &b)
 	std::cout << std::endl;
 }
 
-void pretty_print_swap(std::pair<uint_fast8_t, uint_fast8_t> &swap)
+std::string pretty_print_swap(std::pair<uint_fast8_t, uint_fast8_t> &swap)
 {
-	std::cout << " (" << index2rank_file[swap.first] << ", " << index2rank_file[swap.second] << ")";
+	std::string out = " (" + index2rank_file[swap.first] + ", " + index2rank_file[swap.second] +  ")"; 
+	return out;
 }
 
-void pretty_print_action(action &action)
+std::string pretty_print_action(action &action)
 {
+	std::string out;
+
 	if (action.pos == BOARD_SIZE) {
-		std::cout << " (SKIP)";
+		out = " (SKIP)";
 	} else {
-		std::cout <<" (" << index2rank_file[action.pos] << ", [";
+		out = " (" + index2rank_file[action.pos] + ", [";
 		for (int i = 0; i < action.num_trgts; ++i) {
-			std::cout << index2rank_file[action.trgts[i]];
+			out += index2rank_file[action.trgts[i]];
 			if (i != action.num_trgts - 1) {
-				std::cout << ", ";
+				out += ", ";
 			}
 		}
-		std::cout << "])";
+		out += "])";
 	}
+	return out;
 }
 
 void display_moves(Board &b, int depth)
@@ -227,23 +232,22 @@ void display_moves(Board &b, int depth)
 		auto swaps = b.generate_swaps();
 		std::cout << "Swaps:";
 		for (auto &swap : swaps) {
-			pretty_print_swap(swap);
+			std::cout << pretty_print_swap(swap);
 		}
 		if (depth) {
 			auto &swap = swaps[index];
-			std::cout << "\nSuggested Move: ";
-			pretty_print_swap(swap);
+			std::cout << "\nSuggested Move: " << pretty_print_swap(swap);
 		}
 	} else {
 		auto actions = b.generate_actions();
 		std::cout << "Actions:";
 		for (auto &action : actions) {
-			pretty_print_action(action);
+			std::cout << pretty_print_action(action);
 		}
 		if (depth) {
 			auto &action = actions[index];
 			std::cout << "\nSuggested Move: ";
-			pretty_print_action(action);
+			std::cout << pretty_print_action(action);
 		}
 	}
 	std::cout << std::endl;
@@ -363,11 +367,11 @@ void play(Board &b, Config &config)
 				auto swaps = b.generate_swaps();
 				choice.swap.first = swaps[move_index].first; 
 				choice.swap.second = swaps[move_index].second; 
-				pretty_print_swap(swaps[move_index]);
+				std::cout << pretty_print_swap(swaps[move_index]);
 			} else {
 				auto actions = b.generate_actions();
 				choice.act = actions[move_index];
-				pretty_print_action(choice.act);
+				std::cout << pretty_print_action(choice.act);
 			}
 			std::cout << "\n" << std::endl;
 		}
@@ -392,7 +396,7 @@ void play(Board &b, Config &config)
 int main(int argc, char *argv[])
 {
 	Board b;
-	Config config{{HUMAN, COMPUTER}, "config/positions/default1.txt", 0, 6};
+	Config config{{HUMAN, COMPUTER}, "config/positions/default1.txt", "config/last_game.log",  0, 6};
 
 	while (1) {
 		if (main_menu(config)) {
