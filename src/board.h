@@ -11,6 +11,8 @@
 #define BOARD_HEIGHT 4
 #define BOARD_SIZE (BOARD_WIDTH * BOARD_HEIGHT)
 
+#define uint_fast128_t unsigned __int128
+
 enum Team {
 	BLACK = 0,
 	WHITE = 1,
@@ -153,6 +155,13 @@ class Board {
 	 * Args: f - the file to load the state from.
 	 */
 	bool load_file(std::string &f);
+	/* Description: Converts the current state of the board to a unsigned 128 bit integer.
+	 */
+	uint_fast128_t hash();
+	/* Description: Loads the game state from the given unsinged 128 bit integer.
+	 * Args: state - the integer to load the game state from.
+	 */
+	bool load_hash(uint_fast128_t state);
 	/* Description: Returns the number of skips in a row Team t has used.
 	 * Args: t - the team to check.
 	 */

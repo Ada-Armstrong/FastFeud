@@ -110,3 +110,30 @@ TEST(BoardBug, MedicOverheal)
 	// No actions besides skipping should be avaliable
 	ASSERT_EQ(actions.size(), 1);
 }
+
+TEST(BoardHashingTests, Simple)
+{
+	Board b1, b2;
+
+	std::string file_name = "test_positions/medic_bug.txt"; 
+	ASSERT_EQ(b1.load_file(file_name), true);
+
+	ASSERT_EQ(b2.load_hash(b1.hash()), true);
+	EXPECT_EQ(b1.hash(), b2.hash());
+
+	EXPECT_EQ(b1.state, b2.state);
+	EXPECT_EQ(b1.to_play, b2.to_play);
+	EXPECT_EQ(b1.turn_count, b2.turn_count);
+
+	auto tiles1 = b1.tile_info();
+	auto tiles2 = b2.tile_info();
+	for (int i = 0; i < tiles1.size(); ++i) {
+		auto &t1 = tiles1[i];
+		auto &t2 = tiles2[i];
+
+		EXPECT_EQ(t1.team, t2.team);
+		EXPECT_EQ(t1.type, t2.type);
+		EXPECT_EQ(t1.hp, t2.hp);
+		EXPECT_EQ(t1.max_hp, t2.max_hp);
+	}
+}

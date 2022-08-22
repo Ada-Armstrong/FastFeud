@@ -298,6 +298,71 @@ bool Board::load_file(std::string &filename)
 	return true;
 }
 
+uint_fast128_t Board::hash()
+{
+	uint_fast128_t state = 0;
+	const int offset = 7;
+	for (int i = 0; i < BOARD_SIZE; ++i) {
+		auto &tile = this->info[i];
+		int team = tile.team & 0x1;
+		int hp = tile.hp & 0x7;
+		int type = tile.type & 0x7;
+		state |= ((uint_fast128_t)((team << 6) | (hp << 3) | type)) << (offset * i);
+	}
+
+	state |= ((uint_fast128_t)this->state) << (offset * BOARD_SIZE);
+	state |= ((uint_fast128_t)this->to_play) << (offset * BOARD_SIZE + 1);
+	state |= ((uint_fast128_t)this->passes[BLACK]) << (offset * BOARD_SIZE + 2);
+	state |= ((uint_fast128_t)this->passes[WHITE]) << (offset * BOARD_SIZE + 4);
+	// last 10 bits to store quarter turns	
+	state |= ((uint_fast128_t)this->turn_count) << (offset * BOARD_SIZE + 6);
+
+	/*
+	std::cout << std::hex
+		<< (int)((state >> 96) & 0xffffffff)
+		<< (int)((state >> 64) & 0xffffffff)
+		<< (int)((state >> 32) & 0xffffffff)
+		<< (int)(state & 0xffffffff)
+		<< std::endl;
+	*/
+	return state;
+}
+
+bool Board::load_hash(uint_fast128_t state)
+{
+	const int offset = 7;
+	for (int i = 0; i < BOARD_SIZE; ++i) {
+		Piece p = (Piece)(state & 0x7);
+		int hp = (state >> 3) & 0x7;
+		Team t = (Team)((state >> 6) & 0x1);
+		int max_hp = piece_max_hp(p);
+		//std::cout << t << " " << p << " " << hp << " " << max_hp << std::endl;
+		if (hp > max_hp | p == NUM_PIECES) {
+			return false;
+		}
+		if (hp <= 0) {
+			this->place_piece(EMPTY, NONE, 0, 0, i);
+		} else {
+			this->place_piece(p, t, hp, max_hp, i);
+		}
+		state >>= offset;
+	}
+
+	this->state = (Turn_T)(state & 0x1);
+	this->to_play = (Team)((state >> 1) & 0x1);
+	this->passes[BLACK] = (state >> 2) & 0x3;
+	this->passes[BLACK] = (state >> 4) & 0x3;
+	this->turn_count = state >> 6;
+
+	if (this->passes[BLACK] > 2 || this->passes[WHITE] > 2) {
+		return false;
+	}
+
+	update_all_activity();
+
+	return true;
+}
+
 int Board::get_passes(Team t)
 {
 	assert(t != NUM_TEAMS || t != NONE);
