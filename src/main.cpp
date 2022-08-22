@@ -27,7 +27,6 @@ enum Player {
 struct Config {
 	Player players[2];
 	std::string filename;
-	std::string logfile;
 	int hint_depth;
 	int search_depth;
 };
@@ -396,7 +395,7 @@ void play(Board &b, Config &config)
 int main(int argc, char *argv[])
 {
 	Board b;
-	Config config{{HUMAN, COMPUTER}, "config/positions/default1.txt", "config/last_game.log",  0, 6};
+	Config config{{HUMAN, COMPUTER}, "config/positions/default1.txt", 0, 6};
 
 	while (1) {
 		if (main_menu(config)) {
